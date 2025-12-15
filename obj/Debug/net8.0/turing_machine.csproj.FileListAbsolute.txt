@@ -1,0 +1,15 @@
+/home/under/Licenta/Circuit-SAT/obj/Debug/net8.0/turing_machine.GeneratedMSBuildEditorConfig.editorconfig
+/home/under/Licenta/Circuit-SAT/obj/Debug/net8.0/turing_machine.AssemblyInfoInputs.cache
+/home/under/Licenta/Circuit-SAT/obj/Debug/net8.0/turing_machine.AssemblyInfo.cs
+/home/under/Licenta/Circuit-SAT/obj/Debug/net8.0/turing_machine.csproj.CoreCompileInputs.cache
+/home/under/Licenta/Circuit-SAT/obj/Debug/net8.0/turing_machine.sourcelink.json
+/home/under/Licenta/Circuit-SAT/turing_machine
+/home/under/Licenta/Circuit-SAT/obj/Debug/net8.0/turing_machine.dll
+/home/under/Licenta/Circuit-SAT/obj/Debug/net8.0/refint/turing_machine.dll
+/home/under/Licenta/Circuit-SAT/obj/Debug/net8.0/turing_machine.pdb
+/home/under/Licenta/Circuit-SAT/turing_machine.deps.json
+/home/under/Licenta/Circuit-SAT/obj/Debug/net8.0/turing_machine.genruntimeconfig.cache
+/home/under/Licenta/Circuit-SAT/turing_machine.runtimeconfig.json
+/home/under/Licenta/Circuit-SAT/turing_machine.dll
+/home/under/Licenta/Circuit-SAT/obj/Debug/net8.0/ref/turing_machine.dll
+/home/under/Licenta/Circuit-SAT/turing_machine.pdb
