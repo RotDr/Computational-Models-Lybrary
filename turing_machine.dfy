@@ -1,8 +1,18 @@
 datatype Symbol = NonBlankSymbol (s : string) | Blank 
 
-const InputSymbols : set<string>
+type InputSymbols = set<Symbol>
 
-const AdditionalTapeSymbols : set<string>
+ghost predicate isInputValid (input:seq<string>,inputSymbols:InputSymbols)
+{
+  forall i:string :: (i in input) ==> (NonBlankSymbol(i) in inputSymbols)
+}
+
+type AdditionalTapeSymbols = set<Symbol> // Blank e mereu acelasi indiferent de tm
+
+ghost predicate isTapeSymbolsValid (inps:InputSymbols,ats:AdditionalTapeSymbols)
+{
+    inps*ats=={} && Blank in ats
+}
 
 type iseq<T> = int -> T
 
@@ -34,7 +44,12 @@ datatype Direction = Left | Right
 datatype Action = Action(state : State, symbol : Symbol, direction : Direction)
  
 type Transitions = map<Key, Action>
-
+ghost predicate isTransitionsValid(delta:Transitions,inps:InputSymbols,adts:AdditionalTapeSymbols)
+  requires isTapeSymbolsValid(inps,adts)
+{
+  forall q0:State,s0:Symbol :: Key(q0,s0) in delta.Keys ==> ((s0 in inps+adts) && match delta[Key(q0,s0)]
+                                                                                      case Action(_,s1,_) => s1 in inps+adts)
+}
 datatype Option<T> = Some(t:T) |None
 
 function applyTransition(config : Configuration, delta : Transitions) : Option<Configuration>
@@ -63,14 +78,16 @@ function initialTape(input : seq<string>) : iseq<Symbol>
         else Blank
 }
 
-function initialConfiguration (input: seq<string>, q:State)  :Configuration       // avem nevoie de o stare initiala
+function initialConfiguration (input: seq<string>, q:State, inputS:InputSymbols)  :Configuration       // avem nevoie de o stare initiala
+  requires isInputValid(input,inputS)
 {
     Configuration(q,initialTape(input),0)
 }
-method runTM(delta : Transitions, input : seq<string>, q0:State) returns (con:Option<Configuration>) // trebuie o stare initiala
+method runTM(delta : Transitions, input : seq<string>, q0:State,inputS:InputSymbols,AddTapeS:AdditionalTapeSymbols) returns (con:Option<Configuration>) // trebuie o stare initiala
   decreases *
+  requires isTransitionsValid(delta,inputS,AddTapeS)
 {
-    var config:=initialConfiguration(input,q0);
+    var config:=initialConfiguration(input,q0,inputS);
     var m:=runTM'(delta,config);
     return m;
 }
@@ -116,29 +133,42 @@ ghost predicate isConfRejected(conf:Configuration)
                                     case FinalState(_,c) => c==Reject
                                     case NormalState(_) => false
 }
-ghost predicate isAcceptedInTM (delta : Transitions, q0:State,input:seq<string>)
+ghost predicate isAcceptedInTM (delta : Transitions, q0:State,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,input:seq<string>)
+  requires isTransitionsValid(delta,inputS,addTapeS)
 {
-  exists conf:Configuration :: isConfAccepted(conf) && isThereAClosedTransition(delta,initialConfiguration(input,q0),conf)
+  exists conf:Configuration :: isConfAccepted(conf) && isThereAClosedTransition(delta,initialConfiguration(input,q0,inputS),conf)
 
 } 
-ghost predicate isRejectedInTM (delta : Transitions, q0:State,input:seq<string>)
+ghost predicate isRejectedInTM (delta : Transitions, q0:State,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,input:seq<string>)
+  requires isTransitionsValid(delta,inputS,addTapeS)
 {
-  exists conf:Configuration :: isConfRejected(conf) && isThereAClosedTransition(delta,initialConfiguration(input,q0),conf)
+  exists conf:Configuration :: isConfRejected(conf) && isThereAClosedTransition(delta,initialConfiguration(input,q0,inputS),conf)
 
 } 
-ghost predicate isLanguageAcceptedInTM (delta:Transitions,q0:State,lang:Language)
+ghost predicate isLanguageAcceptedInTM (delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,q0:State,lang:Language)
+    requires isTransitionsValid(delta,inputS,addTapeS)
 {
-    forall input:seq<string> :: (input in lang) <==> isAcceptedInTM(delta,q0,input)
+    forall input:seq<string> :: (input in lang) <==> isAcceptedInTM(delta,q0,inputS,addTapeS,input)
 }
-ghost predicate isTMADecider (delta:Transitions,q0:State)
+ghost predicate isTMADecider (delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,q0:State)
+requires isTransitionsValid(delta,inputS,addTapeS)
 {
-  forall input:seq<string> :: (isAcceptedInTM(delta,q0,input) || isRejectedInTM(delta,q0,input))
+  forall input:seq<string> :: (isAcceptedInTM(delta,q0,inputS,addTapeS,input) || isRejectedInTM(delta,q0,inputS,addTapeS,input))
 }
 
 ghost predicate isLanguageDecidable (lang:Language)
 {
-  exists delta:Transitions,q0:State :: isTMADecider(delta,q0) && isLanguageAcceptedInTM(delta,q0,lang)
+  exists delta:Transitions,q0:State,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols :: isTMADecider(delta,inputS,addTapeS,q0) && isLanguageAcceptedInTM(delta,inputS,addTapeS,q0,lang)
 }
+type reduction = seq<string>-> seq<string> //toate functiile sunt conputable by default aici
+
+ghost predicate isReductionBetweenLanguages(A:Language,B:Language,r:reduction)
+  requires isLanguageDecidable(A) && isLanguageDecidable(B)
+{
+  forall input:seq<string> :: (input in A) <==> (r(input) in B) 
+}
+function languageFromTM (delta:Transitions,q0:State,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols) : Language
+
 method Main()
   decreases *
 {
@@ -180,3 +210,6 @@ method Main()
 }
 // defineste un limbaj si limbaj decidabil in dafny
 // inchidere tranzition
+// reduceable
+// codare a unui limbaj np complete
+// 
