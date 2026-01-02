@@ -9,11 +9,23 @@ using System;
 using System.Numerics;
 using System.Collections;
 [assembly: DafnyAssembly.DafnySourceAttribute(@"// dafny 4.11.0.0
-// Command-line arguments: run --no-verify /home/under/Licenta/Circuit-SAT/turing_machine.dfy
+// Command-line arguments: test --no-verify c:\Users\Under\Licenta\Circuit-SAT\turing_machine.dfy
 // turing_machine.dfy
 
-const InputSymbols: set<string>
-const AdditionalTapeSymbols: set<string>
+ghost predicate isInputValid(input: seq<string>, inputSymbols: InputSymbols)
+  decreases input, inputSymbols
+{
+  forall i: string {:trigger NonBlankSymbol(i)} {:trigger i in input} :: 
+    i in input ==>
+      NonBlankSymbol(i) in inputSymbols
+}
+
+ghost predicate isTapeSymbolsValid(inps: InputSymbols, ats: AdditionalTapeSymbols)
+  decreases inps, ats
+{
+  inps * ats == {} &&
+  Blank in ats
+}
 
 function moveLeft(con: Configuration): Configuration
   decreases con
@@ -31,13 +43,50 @@ function moveRight(con: Configuration): Configuration
     Configuration(s, tape, head + 1)
 }
 
-function applyTransition(config: Configuration, delta: Transitions): Option<Configuration>
-  decreases config, delta
+ghost predicate isTransitionsValid(delta: Transitions, inps: InputSymbols, adts: AdditionalTapeSymbols)
+  requires isTapeSymbolsValid(inps, adts)
+  decreases delta, inps, adts
+{
+  forall q0: State, s0: Symbol {:trigger Key(q0, s0)} :: 
+    (Key(q0, s0) in delta.Keys ==>
+      s0 in inps + adts) &&
+    (Key(q0, s0) in delta.Keys ==>
+      |delta[Key(q0, s0)]| >= 1) &&
+    (Key(q0, s0) in delta.Keys ==>
+      forall i: Action {:trigger i in delta[Key(q0, s0)]} :: 
+        i in delta[Key(q0, s0)] ==>
+          match i case Action(_ /* _v0 */, s1, _ /* _v1 */) => s1 in inps + adts)
+}
+
+ghost predicate isTransitionsDeterministic(delta: Transitions, inps: InputSymbols, adts: AdditionalTapeSymbols)
+  requires isTapeSymbolsValid(inps, adts)
+  requires isTransitionsValid(delta, inps, adts)
+  decreases delta, inps, adts
+{
+  forall q0: State, s0: Symbol {:trigger Key(q0, s0)} :: 
+    Key(q0, s0) in delta.Keys ==>
+      |delta[Key(q0, s0)]| == 1
+}
+
+predicate isPozInTransitions(config: Configuration, delta: Transitions, poz: int)
+  decreases config, delta, poz
 {
   match config
   case Configuration(s, tape, head) =>
     if Key(s, tape(head)) in delta.Keys then
-      match delta[Key(s, tape(head))]
+      0 <= poz < |delta[Key(s, tape(head))]|
+    else
+      true
+}
+
+function applyTransition(config: Configuration, delta: Transitions, poz: int): Option<Configuration>
+  requires isPozInTransitions(config, delta, poz)
+  decreases config, delta, poz
+{
+  match config
+  case Configuration(s, tape, head) =>
+    if Key(s, tape(head)) in delta.Keys then
+      match delta[Key(s, tape(head))][poz]
       case Action(state, symbol, direction) =>
         match direction
         case Left() =>
@@ -60,36 +109,45 @@ function initialTape(input: seq<string>): iseq<Symbol>
   (i: int) => if 0 <= i < |input| then NonBlankSymbol(input[i]) else Blank
 }
 
-function initialConfiguration(input: seq<string>, q: State): Configuration
-  decreases input, q
+function initialConfiguration(input: seq<string>, q: State, inputS: InputSymbols): Configuration
+  requires isInputValid(input, inputS)
+  decreases input, q, inputS
 {
   Configuration(q, initialTape(input), 0)
 }
 
-method runTM(delta: Transitions, input: seq<string>, q0: State)
+method runDTM(delta: Transitions, input: seq<string>, q0: State, inputS: InputSymbols, AddTapeS: AdditionalTapeSymbols)
     returns (con: Option<Configuration>)
+  requires isTapeSymbolsValid(inputS, AddTapeS)
+  requires isInputValid(input, inputS)
+  requires isTransitionsValid(delta, inputS, AddTapeS)
+  requires isTransitionsDeterministic(delta, inputS, AddTapeS)
   decreases *
 {
-  var config := initialConfiguration(input, q0);
-  var m := runTM'(delta, config);
+  var config := initialConfiguration(input, q0, inputS);
+  var m := runDTM'(delta, config, inputS, AddTapeS);
   return m;
 }
 
-method runTM'(delta: Transitions, config: Configuration) returns (con: Option<Configuration>)
+method runDTM'(delta: Transitions, config: Configuration, inputS: InputSymbols, AddTapeS: AdditionalTapeSymbols)
+    returns (con: Option<Configuration>)
+  requires isTapeSymbolsValid(inputS, AddTapeS)
+  requires isTransitionsValid(delta, inputS, AddTapeS)
+  requires isTransitionsDeterministic(delta, inputS, AddTapeS)
   decreases *
 {
   match config
   case {:split false} Configuration(q, tape, head) =>
     match q
-    case {:split false} FinalState(_ /* _v0 */, finale) =>
+    case {:split false} FinalState(_ /* _v2 */, finale) =>
       return Some(config);
     case {:split false} NormalState(q0) =>
       {
-        var conf := applyTransition(config, delta);
+        var conf := applyTransition(config, delta, 0);
         match conf
         case {:split false} Some(c) =>
           {
-            var r := runTM'(delta, c);
+            var r := runDTM'(delta, c, inputS, AddTapeS);
             return r;
           }
         case {:split false} None() =>
@@ -97,41 +155,200 @@ method runTM'(delta: Transitions, config: Configuration) returns (con: Option<Co
       }
 }
 
-method Main(_noArgsParameter: seq<seq<char>>)
-  decreases *
+ghost predicate isThereAClosedTransitionInNSteps(delta: Transitions, conf1: Configuration, conf2: Configuration, n: nat)
+  decreases n
 {
-  var q0 := NormalState(""q0"");
-  var q1 := NormalState(""q1"");
-  var qAcc := FinalState(""qAcc"", Accept);
-  var qRej := FinalState(""qRej"", Reject);
-  var one := NonBlankSymbol(""1"");
-  var delta := map[Key(q0, one) := Action(q1, Blank, Right), Key(q1, one) := Action(q0, Blank, Right), Key(q0, Blank) := Action(qAcc, Blank, Right), Key(q1, Blank) := Action(qRej, Blank, Right)];
-  assert one == NonBlankSymbol(""1"");
-  var input := [""1"", ""1"", ""1"", ""1"", ""1""];
-  print input;
-  print ""\n"";
-  var config := runTM(delta, input, q0);
-  match config
-  case {:split false} Some(c) =>
-    {
-      match c
-      case {:split false} Configuration(q, tape, head) =>
-        {
-          print q;
-          print ""\n"";
-          print head;
-          print ""\n"";
-          print tape(2);
-          print tape(head);
-        }
-    }
-  case {:split false} None() =>
-    {
-      print ""failed"";
-    }
+  n != 0 &&
+  (conf1 == conf2 || exists conf': Configuration, poz: int {:trigger Some(conf'), applyTransition(conf1, delta, poz)} {:trigger Some(conf'), isPozInTransitions(conf1, delta, poz)} :: isPozInTransitions(conf1, delta, poz) && applyTransition(conf1, delta, poz) == Some(conf') && isThereAClosedTransitionInNSteps(delta, conf', conf2, n - 1))
+}
+
+ghost predicate isThereAClosedTransition(delta: Transitions, conf1: Configuration, conf2: Configuration)
+  decreases delta, conf1, conf2
+{
+  exists n: nat {:trigger isThereAClosedTransitionInNSteps(delta, conf1, conf2, n)} :: 
+    isThereAClosedTransitionInNSteps(delta, conf1, conf2, n)
+}
+
+function Pow(n: nat, m: nat): nat
+  decreases n, m
+{
+  if m == 0 then
+    1
+  else
+    n * Pow(n, m - 1)
+}
+
+ghost predicate isPolynomial(n: nat, m: int)
+  decreases n, m
+{
+  exists x: nat, _t#0: int {:trigger Pow(n, _t#0), Pow(n, x)} | _t#0 == x + 1 :: 
+    Pow(n, x) <= m &&
+    Pow(n, _t#0) >= m
+}
+
+ghost predicate isThereAClosedTransitionInPolynomialTime(delta: Transitions, conf1: Configuration, conf2: Configuration, m: int)
+  decreases delta, conf1, conf2, m
+{
+  exists n: nat {:trigger isPolynomial(n, m)} {:trigger isThereAClosedTransitionInNSteps(delta, conf1, conf2, n)} :: 
+    isThereAClosedTransitionInNSteps(delta, conf1, conf2, n) &&
+    isPolynomial(n, m)
+}
+
+ghost predicate isConfAccepted(conf: Configuration)
+  decreases conf
+{
+  match conf
+  case Configuration(q, _ /* _v3 */, _ /* _v4 */) =>
+    match q
+    case FinalState(_ /* _v5 */, c) =>
+      c == Accept
+    case NormalState(_ /* _v6 */) =>
+      false
+}
+
+ghost predicate isConfRejected(conf: Configuration)
+  decreases conf
+{
+  match conf
+  case Configuration(q, _ /* _v7 */, _ /* _v8 */) =>
+    match q
+    case FinalState(_ /* _v9 */, c) =>
+      c == Reject
+    case NormalState(_ /* _v10 */) =>
+      false
+}
+
+ghost predicate isAcceptedInTM(delta: Transitions, q0: State, inputS: InputSymbols, addTapeS: AdditionalTapeSymbols, input: seq<string>)
+  requires isTapeSymbolsValid(inputS, addTapeS)
+  requires isTransitionsValid(delta, inputS, addTapeS)
+  requires isInputValid(input, inputS)
+  decreases delta, q0, inputS, addTapeS, input
+{
+  exists conf: Configuration {:trigger isThereAClosedTransition(delta, initialConfiguration(input, q0, inputS), conf)} {:trigger isConfAccepted(conf)} :: 
+    isConfAccepted(conf) &&
+    isThereAClosedTransition(delta, initialConfiguration(input, q0, inputS), conf)
+}
+
+ghost predicate isAcceptedInTMInPolynomialTime(delta: Transitions, q0: State, inputS: InputSymbols, addTapeS: AdditionalTapeSymbols, input: seq<string>)
+  requires isTapeSymbolsValid(inputS, addTapeS)
+  requires isTransitionsValid(delta, inputS, addTapeS)
+  requires isInputValid(input, inputS)
+  decreases delta, q0, inputS, addTapeS, input
+{
+  exists conf: Configuration {:trigger isThereAClosedTransitionInPolynomialTime(delta, initialConfiguration(input, q0, inputS), conf, |input|)} {:trigger isConfAccepted(conf)} :: 
+    isConfAccepted(conf) &&
+    isThereAClosedTransitionInPolynomialTime(delta, initialConfiguration(input, q0, inputS), conf, |input|)
+}
+
+ghost predicate isRejectedInTM(delta: Transitions, q0: State, inputS: InputSymbols, addTapeS: AdditionalTapeSymbols, input: seq<string>)
+  requires isTapeSymbolsValid(inputS, addTapeS)
+  requires isTransitionsValid(delta, inputS, addTapeS)
+  requires isInputValid(input, inputS)
+  decreases delta, q0, inputS, addTapeS, input
+{
+  exists conf: Configuration {:trigger isThereAClosedTransition(delta, initialConfiguration(input, q0, inputS), conf)} {:trigger isConfRejected(conf)} :: 
+    isConfRejected(conf) &&
+    isThereAClosedTransition(delta, initialConfiguration(input, q0, inputS), conf)
+}
+
+ghost predicate isLanguageAcceptedInTM(delta: Transitions, inputS: InputSymbols, addTapeS: AdditionalTapeSymbols, q0: State, lang: Language)
+  requires isTapeSymbolsValid(inputS, addTapeS)
+  requires isTransitionsValid(delta, inputS, addTapeS)
+  decreases delta, inputS, addTapeS, q0, lang
+{
+  forall input: seq<string> {:trigger isAcceptedInTM(delta, q0, inputS, addTapeS, input)} {:trigger isInputValid(input, inputS)} {:trigger input in lang} :: 
+    input in lang <==> isInputValid(input, inputS) && isAcceptedInTM(delta, q0, inputS, addTapeS, input)
+}
+
+ghost predicate isLanguageAcceptedInTMInPolynomialTime(delta: Transitions, inputS: InputSymbols, addTapeS: AdditionalTapeSymbols, q0: State, lang: Language)
+  requires isTapeSymbolsValid(inputS, addTapeS)
+  requires isTransitionsValid(delta, inputS, addTapeS)
+  decreases delta, inputS, addTapeS, q0, lang
+{
+  forall input: seq<string> {:trigger isAcceptedInTMInPolynomialTime(delta, q0, inputS, addTapeS, input)} {:trigger isInputValid(input, inputS)} {:trigger input in lang} :: 
+    input in lang <==> isInputValid(input, inputS) && isAcceptedInTMInPolynomialTime(delta, q0, inputS, addTapeS, input)
+}
+
+ghost predicate isTMADecider(delta: Transitions, inputS: InputSymbols, addTapeS: AdditionalTapeSymbols, q0: State)
+  requires isTapeSymbolsValid(inputS, addTapeS)
+  requires isTransitionsValid(delta, inputS, addTapeS)
+  decreases delta, inputS, addTapeS, q0
+{
+  forall input: seq<string> {:trigger isRejectedInTM(delta, q0, inputS, addTapeS, input)} {:trigger isAcceptedInTM(delta, q0, inputS, addTapeS, input)} {:trigger isInputValid(input, inputS)} :: 
+    isInputValid(input, inputS) ==>
+      isAcceptedInTM(delta, q0, inputS, addTapeS, input) || isRejectedInTM(delta, q0, inputS, addTapeS, input)
+}
+
+ghost predicate isLanguageDecidable(lang: Language)
+  decreases lang
+{
+  exists delta: Transitions, q0: State, inputS: InputSymbols, addTapeS: AdditionalTapeSymbols {:trigger isLanguageAcceptedInTMInPolynomialTime(delta, inputS, addTapeS, q0, lang)} {:trigger isLanguageAcceptedInTM(delta, inputS, addTapeS, q0, lang)} {:trigger isTMADecider(delta, inputS, addTapeS, q0)} :: 
+    isTapeSymbolsValid(inputS, addTapeS) &&
+    isTransitionsValid(delta, inputS, addTapeS) &&
+    isTMADecider(delta, inputS, addTapeS, q0) &&
+    (isLanguageAcceptedInTM(delta, inputS, addTapeS, q0, lang) || isLanguageAcceptedInTMInPolynomialTime(delta, inputS, addTapeS, q0, lang))
+}
+
+ghost predicate isLanguageNPTIME1(lang: Language)
+  decreases lang
+{
+  exists delta: Transitions, q0: State, inputS: InputSymbols, addTapeS: AdditionalTapeSymbols {:trigger isLanguageAcceptedInTMInPolynomialTime(delta, inputS, addTapeS, q0, lang)} {:trigger isTMADecider(delta, inputS, addTapeS, q0)} :: 
+    isTapeSymbolsValid(inputS, addTapeS) &&
+    isTransitionsValid(delta, inputS, addTapeS) &&
+    isTMADecider(delta, inputS, addTapeS, q0) &&
+    isLanguageAcceptedInTMInPolynomialTime(delta, inputS, addTapeS, q0, lang) &&
+    !isTransitionsDeterministic(delta, inputS, addTapeS)
+}
+
+ghost predicate isLanguageNPTIME2(lang: Language)
+  decreases lang
+{
+  exists delta: Transitions, q0: State, inputS: InputSymbols, addTapeS: AdditionalTapeSymbols {:trigger isTMADecider(delta, inputS, addTapeS, q0)} :: 
+    isTapeSymbolsValid(inputS, addTapeS) &&
+    isTransitionsValid(delta, inputS, addTapeS) &&
+    isTMADecider(delta, inputS, addTapeS, q0) &&
+    isTransitionsDeterministic(delta, inputS, addTapeS) &&
+    forall input: seq<string> {:trigger input in lang} :: 
+      input in lang <==> exists c: seq<string> {:trigger input + c} :: isInputValid(input + c, inputS) && isAcceptedInTMInPolynomialTime(delta, q0, inputS, addTapeS, input + c)
+}
+
+lemma NPTIMEisDecidable(lang: Language)
+  requires isLanguageNPTIME1(lang)
+  ensures isLanguageDecidable(lang)
+  decreases lang
+{
+}
+
+ghost predicate isLanguageNPHard(A: Language)
+  requires isLanguageDecidable(A)
+  decreases A
+{
+  forall B: Language {:trigger isLanguageNPTIME1(B)} :: 
+    isLanguageNPTIME1(B) ==>
+      exists r: reduction {:trigger isReductionBetweenLanguages(B, A, r)} :: 
+        isReductionBetweenLanguages(B, A, r)
+}
+
+ghost predicate isReductionBetweenLanguages(A: Language, B: Language, r: reduction)
+  requires isLanguageDecidable(A) && isLanguageDecidable(B)
+  decreases A, B
+{
+  forall input: seq<string> {:trigger r(input)} {:trigger input in A} :: 
+    input in A <==> r(input) in B
+}
+
+method {:verify false} {:main} _Test__Main_(_noArgsParameter: seq<seq<char>>)
+{
+  var success: bool := true;
+  expect success, @""Test failures occurred: see above.
+"";
 }
 
 datatype Symbol = NonBlankSymbol(s: string) | Blank
+
+type InputSymbols = set<Symbol>
+
+type AdditionalTapeSymbols = set<Symbol>
 
 type iseq<T> = int -> T
 
@@ -149,9 +366,13 @@ datatype Direction = Left | Right
 
 datatype Action = Action(state: State, symbol: Symbol, direction: Direction)
 
-type Transitions = map<Key, Action>
+type Transitions = map<Key, seq<Action>>
 
 datatype Option<T> = Some(t: T) | None
+
+type Language = set<seq<string>>
+
+type reduction = seq<string> -> seq<string>
 ")]
 
 //-----------------------------------------------------------------------------
@@ -5828,6 +6049,12 @@ internal static class FuncExtensions {
   public static Func<U1, U2, U3, UResult> DowncastClone<T1, T2, T3, TResult, U1, U2, U3, UResult>(this Func<T1, T2, T3, TResult> F, Func<U1, T1> ArgConv1, Func<U2, T2> ArgConv2, Func<U3, T3> ArgConv3, Func<TResult, UResult> ResConv) {
     return (arg1, arg2, arg3) => ResConv(F(ArgConv1(arg1), ArgConv2(arg2), ArgConv3(arg3)));
   }
+  public static Func<U1, U2, U3, U4, UResult> DowncastClone<T1, T2, T3, T4, TResult, U1, U2, U3, U4, UResult>(this Func<T1, T2, T3, T4, TResult> F, Func<U1, T1> ArgConv1, Func<U2, T2> ArgConv2, Func<U3, T3> ArgConv3, Func<U4, T4> ArgConv4, Func<TResult, UResult> ResConv) {
+    return (arg1, arg2, arg3, arg4) => ResConv(F(ArgConv1(arg1), ArgConv2(arg2), ArgConv3(arg3), ArgConv4(arg4)));
+  }
+  public static Func<U1, U2, U3, U4, U5, UResult> DowncastClone<T1, T2, T3, T4, T5, TResult, U1, U2, U3, U4, U5, UResult>(this Func<T1, T2, T3, T4, T5, TResult> F, Func<U1, T1> ArgConv1, Func<U2, T2> ArgConv2, Func<U3, T3> ArgConv3, Func<U4, T4> ArgConv4, Func<U5, T5> ArgConv5, Func<TResult, UResult> ResConv) {
+    return (arg1, arg2, arg3, arg4, arg5) => ResConv(F(ArgConv1(arg1), ArgConv2(arg2), ArgConv3(arg3), ArgConv4(arg4), ArgConv5(arg5)));
+  }
 }
 // end of class FuncExtensions
 namespace _module {
@@ -5851,7 +6078,7 @@ namespace _module {
         return _module.Configuration.create(_0_s, _1_tape, (_2_head) + (BigInteger.One));
       }
     }
-    public static _IOption<_IConfiguration> applyTransition(_IConfiguration config, Dafny.IMap<_IKey,_IAction> delta)
+    public static bool isPozInTransitions(_IConfiguration config, Dafny.IMap<_IKey,Dafny.ISequence<_IAction>> delta, BigInteger poz)
     {
       _IConfiguration _source0 = config;
       {
@@ -5859,7 +6086,21 @@ namespace _module {
         Func<BigInteger, _ISymbol> _1_tape = _source0.dtor_tape;
         BigInteger _2_head = _source0.dtor_head;
         if (((delta).Keys).Contains(_module.Key.create(_0_s, Dafny.Helpers.Id<Func<BigInteger, _ISymbol>>(_1_tape)(_2_head)))) {
-          _IAction _source1 = Dafny.Map<_IKey, _IAction>.Select(delta,_module.Key.create(_0_s, Dafny.Helpers.Id<Func<BigInteger, _ISymbol>>(_1_tape)(_2_head)));
+          return ((poz).Sign != -1) && ((poz) < (new BigInteger((Dafny.Map<_IKey, Dafny.ISequence<_IAction>>.Select(delta,_module.Key.create(_0_s, Dafny.Helpers.Id<Func<BigInteger, _ISymbol>>(_1_tape)(_2_head)))).Count)));
+        } else {
+          return true;
+        }
+      }
+    }
+    public static _IOption<_IConfiguration> applyTransition(_IConfiguration config, Dafny.IMap<_IKey,Dafny.ISequence<_IAction>> delta, BigInteger poz)
+    {
+      _IConfiguration _source0 = config;
+      {
+        _IState _0_s = _source0.dtor_s;
+        Func<BigInteger, _ISymbol> _1_tape = _source0.dtor_tape;
+        BigInteger _2_head = _source0.dtor_head;
+        if (((delta).Keys).Contains(_module.Key.create(_0_s, Dafny.Helpers.Id<Func<BigInteger, _ISymbol>>(_1_tape)(_2_head)))) {
+          _IAction _source1 = (Dafny.Map<_IKey, Dafny.ISequence<_IAction>>.Select(delta,_module.Key.create(_0_s, Dafny.Helpers.Id<Func<BigInteger, _ISymbol>>(_1_tape)(_2_head)))).Select(poz);
           {
             _IState _3_state = _source1.dtor_state;
             _ISymbol _4_symbol = _source1.dtor_symbol;
@@ -5890,24 +6131,24 @@ namespace _module {
         return ((((_1_i).Sign != -1) && ((_1_i) < (new BigInteger((_0_input).Count)))) ? (_module.Symbol.create_NonBlankSymbol((_0_input).Select(_1_i))) : (_module.Symbol.create_Blank()));
       })))(input);
     }
-    public static _IConfiguration initialConfiguration(Dafny.ISequence<Dafny.ISequence<Dafny.Rune>> input, _IState q)
+    public static _IConfiguration initialConfiguration(Dafny.ISequence<Dafny.ISequence<Dafny.Rune>> input, _IState q, Dafny.ISet<_ISymbol> inputS)
     {
       return _module.Configuration.create(q, __default.initialTape(input), BigInteger.Zero);
     }
-    public static _IOption<_IConfiguration> runTM(Dafny.IMap<_IKey,_IAction> delta, Dafny.ISequence<Dafny.ISequence<Dafny.Rune>> input, _IState q0)
+    public static _IOption<_IConfiguration> runDTM(Dafny.IMap<_IKey,Dafny.ISequence<_IAction>> delta, Dafny.ISequence<Dafny.ISequence<Dafny.Rune>> input, _IState q0, Dafny.ISet<_ISymbol> inputS, Dafny.ISet<_ISymbol> AddTapeS)
     {
       _IOption<_IConfiguration> con = Option<_IConfiguration>.Default();
       _IConfiguration _0_config;
-      _0_config = __default.initialConfiguration(input, q0);
+      _0_config = __default.initialConfiguration(input, q0, inputS);
       _IOption<_IConfiguration> _1_m;
       _IOption<_IConfiguration> _out0;
-      _out0 = __default.runTM_k(delta, _0_config);
+      _out0 = __default.runDTM_k(delta, _0_config, inputS, AddTapeS);
       _1_m = _out0;
       con = _1_m;
       return con;
       return con;
     }
-    public static _IOption<_IConfiguration> runTM_k(Dafny.IMap<_IKey,_IAction> delta, _IConfiguration config)
+    public static _IOption<_IConfiguration> runDTM_k(Dafny.IMap<_IKey,Dafny.ISequence<_IAction>> delta, _IConfiguration config, Dafny.ISet<_ISymbol> inputS, Dafny.ISet<_ISymbol> AddTapeS)
     {
       _IOption<_IConfiguration> con = Option<_IConfiguration>.Default();
       _IConfiguration _source0 = config;
@@ -5928,7 +6169,7 @@ namespace _module {
           Dafny.ISequence<Dafny.Rune> _4_q0 = _source1.dtor_s;
           {
             _IOption<_IConfiguration> _5_conf;
-            _5_conf = __default.applyTransition(config, delta);
+            _5_conf = __default.applyTransition(config, delta, BigInteger.Zero);
             _IOption<_IConfiguration> _source2 = _5_conf;
             {
               if (_source2.is_Some) {
@@ -5936,7 +6177,7 @@ namespace _module {
                 {
                   _IOption<_IConfiguration> _7_r;
                   _IOption<_IConfiguration> _out0;
-                  _out0 = __default.runTM_k(delta, _6_c);
+                  _out0 = __default.runDTM_k(delta, _6_c, inputS, AddTapeS);
                   _7_r = _out0;
                   con = _7_r;
                   return con;
@@ -5956,65 +6197,29 @@ namespace _module {
     after_match0: ;
       return con;
     }
-    public static void _Main(Dafny.ISequence<Dafny.ISequence<Dafny.Rune>> __noArgsParameter)
+    public static BigInteger Pow(BigInteger n, BigInteger m)
     {
-      _IState _0_q0;
-      _0_q0 = _module.State.create_NormalState(Dafny.Sequence<Dafny.Rune>.UnicodeFromString("q0"));
-      _IState _1_q1;
-      _1_q1 = _module.State.create_NormalState(Dafny.Sequence<Dafny.Rune>.UnicodeFromString("q1"));
-      _IState _2_qAcc;
-      _2_qAcc = _module.State.create_FinalState(Dafny.Sequence<Dafny.Rune>.UnicodeFromString("qAcc"), _module.Conclusion.create_Accept());
-      _IState _3_qRej;
-      _3_qRej = _module.State.create_FinalState(Dafny.Sequence<Dafny.Rune>.UnicodeFromString("qRej"), _module.Conclusion.create_Reject());
-      _ISymbol _4_one;
-      _4_one = _module.Symbol.create_NonBlankSymbol(Dafny.Sequence<Dafny.Rune>.UnicodeFromString("1"));
-      Dafny.IMap<_IKey,_IAction> _5_delta;
-      _5_delta = Dafny.Map<_IKey, _IAction>.FromElements(new Dafny.Pair<_IKey, _IAction>(_module.Key.create(_0_q0, _4_one), _module.Action.create(_1_q1, _module.Symbol.create_Blank(), _module.Direction.create_Right())), new Dafny.Pair<_IKey, _IAction>(_module.Key.create(_1_q1, _4_one), _module.Action.create(_0_q0, _module.Symbol.create_Blank(), _module.Direction.create_Right())), new Dafny.Pair<_IKey, _IAction>(_module.Key.create(_0_q0, _module.Symbol.create_Blank()), _module.Action.create(_2_qAcc, _module.Symbol.create_Blank(), _module.Direction.create_Right())), new Dafny.Pair<_IKey, _IAction>(_module.Key.create(_1_q1, _module.Symbol.create_Blank()), _module.Action.create(_3_qRej, _module.Symbol.create_Blank(), _module.Direction.create_Right())));
-      Dafny.ISequence<Dafny.ISequence<Dafny.Rune>> _6_input;
-      _6_input = Dafny.Sequence<Dafny.ISequence<Dafny.Rune>>.FromElements(Dafny.Sequence<Dafny.Rune>.UnicodeFromString("1"), Dafny.Sequence<Dafny.Rune>.UnicodeFromString("1"), Dafny.Sequence<Dafny.Rune>.UnicodeFromString("1"), Dafny.Sequence<Dafny.Rune>.UnicodeFromString("1"), Dafny.Sequence<Dafny.Rune>.UnicodeFromString("1"));
-      Dafny.Helpers.Print((_6_input));
-      Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
-      _IOption<_IConfiguration> _7_config;
-      _IOption<_IConfiguration> _out0;
-      _out0 = __default.runTM(_5_delta, _6_input, _0_q0);
-      _7_config = _out0;
-      _IOption<_IConfiguration> _source0 = _7_config;
-      {
-        if (_source0.is_Some) {
-          _IConfiguration _8_c = _source0.dtor_t;
-          {
-            _IConfiguration _source1 = _8_c;
-            {
-              _IState _9_q = _source1.dtor_s;
-              Func<BigInteger, _ISymbol> _10_tape = _source1.dtor_tape;
-              BigInteger _11_head = _source1.dtor_head;
-              {
-                Dafny.Helpers.Print((_9_q));
-                Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
-                Dafny.Helpers.Print((_11_head));
-                Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("\n")).ToVerbatimString(false));
-                Dafny.Helpers.Print((Dafny.Helpers.Id<Func<BigInteger, _ISymbol>>(_10_tape)(new BigInteger(2))));
-                Dafny.Helpers.Print((Dafny.Helpers.Id<Func<BigInteger, _ISymbol>>(_10_tape)(_11_head)));
-              }
-            }
-          after_match1: ;
-          }
-          goto after_match0;
-        }
+      BigInteger _0___accumulator = BigInteger.One;
+    TAIL_CALL_START: ;
+      if ((m).Sign == 0) {
+        return (BigInteger.One) * (_0___accumulator);
+      } else {
+        _0___accumulator = (_0___accumulator) * (n);
+        BigInteger _in0 = n;
+        BigInteger _in1 = (m) - (BigInteger.One);
+        n = _in0;
+        m = _in1;
+        goto TAIL_CALL_START;
       }
-      {
-        {
-          Dafny.Helpers.Print((Dafny.Sequence<Dafny.Rune>.UnicodeFromString("failed")).ToVerbatimString(false));
-        }
-      }
-    after_match0: ;
     }
-    public static Dafny.ISet<Dafny.ISequence<Dafny.Rune>> InputSymbols { get {
-      return Dafny.Set<Dafny.ISequence<Dafny.Rune>>.Empty;
-    } }
-    public static Dafny.ISet<Dafny.ISequence<Dafny.Rune>> AdditionalTapeSymbols { get {
-      return Dafny.Set<Dafny.ISequence<Dafny.Rune>>.Empty;
-    } }
+    public static void __Test____Main__(Dafny.ISequence<Dafny.ISequence<Dafny.Rune>> __noArgsParameter)
+    {
+      bool _0_success;
+      _0_success = true;
+      if (!(_0_success)) {
+        throw new Dafny.HaltException("c:/Users/Under/Licenta/Circuit-SAT/turing_machine.dfy(1,0): " + Dafny.Sequence<Dafny.Rune>.UnicodeFromString(@"Test failures occurred: see above.
+").ToVerbatimString(false));}
+    }
   }
 
   public interface _ISymbol {
@@ -6646,6 +6851,6 @@ namespace _module {
 } // end of namespace _module
 class __CallToMain {
   public static void Main(string[] args) {
-    Dafny.Helpers.WithHaltHandling(() => _module.__default._Main(Dafny.Sequence<Dafny.ISequence<Dafny.Rune>>.UnicodeFromMainArguments(args)));
+    Dafny.Helpers.WithHaltHandling(() => _module.__default.__Test____Main__(Dafny.Sequence<Dafny.ISequence<Dafny.Rune>>.UnicodeFromMainArguments(args)));
   }
 }

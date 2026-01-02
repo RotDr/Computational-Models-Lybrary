@@ -147,9 +147,13 @@ function Pow(n:nat,m:nat) : nat
   if m==0 then 1
   else n*Pow(n,m-1)
 }
+ghost predicate isPolynomial (n:nat,m:int)
+{
+  exists x:nat ::Pow(n,x)<=m && Pow(n,x+1)>=m
+}
 ghost predicate isThereAClosedTransitionInPolynomialTime(delta:Transitions, conf1:Configuration,conf2:Configuration,m:int)
 {
-  exists n:nat,x:nat:: isThereAClosedTransitionInNSteps(delta, conf1, conf2, n) && Pow(n,x)<=m && Pow(n,x+1)>=m
+  exists n:nat:: isThereAClosedTransitionInNSteps(delta, conf1, conf2, n) && isPolynomial(n,m)
 }
 type Language=set<seq<string>>
 ghost predicate isConfAccepted(conf:Configuration)
@@ -218,15 +222,37 @@ ghost predicate isLanguageDecidable (lang:Language)
   exists delta:Transitions,q0:State,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols :: (isTapeSymbolsValid(inputS,addTapeS) 
   && isTransitionsValid(delta,inputS,addTapeS) 
   && isTMADecider(delta,inputS,addTapeS,q0) 
-  && isLanguageAcceptedInTM(delta,inputS,addTapeS,q0,lang))
+  && (isLanguageAcceptedInTM(delta,inputS,addTapeS,q0,lang) || isLanguageAcceptedInTMInPolynomialTime(delta,inputS,addTapeS,q0,lang))
+  )
 }
-ghost predicate isLanguageNPTIME (lang:Language)
+ghost predicate isLanguageNPTIME1 (lang:Language)
 {
   exists delta:Transitions,q0:State,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols :: (isTapeSymbolsValid(inputS,addTapeS) 
   && isTransitionsValid(delta,inputS,addTapeS) 
   && isTMADecider(delta,inputS,addTapeS,q0) 
   && isLanguageAcceptedInTMInPolynomialTime(delta,inputS,addTapeS,q0,lang)
   && !isTransitionsDeterministic(delta,inputS,addTapeS))
+}
+ghost predicate isLanguageNPTIME2 (lang:Language)
+{
+  exists delta:Transitions,q0:State,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols ::(isTapeSymbolsValid(inputS,addTapeS) 
+  && isTransitionsValid(delta,inputS,addTapeS) 
+  && isTMADecider(delta,inputS,addTapeS,q0) 
+  && isTransitionsDeterministic(delta,inputS,addTapeS)
+  && forall input:seq<string> :: (input in lang) <==> (exists c:seq<string> :: isInputValid(input+c,inputS) && isAcceptedInTMInPolynomialTime(delta,q0,inputS,addTapeS,input+c))
+  )
+}
+lemma NPTIMEisDecidable (lang:Language)
+  requires isLanguageNPTIME1(lang)
+  ensures isLanguageDecidable(lang)
+{
+
+}
+ghost predicate isLanguageNPHard (A:Language)
+  requires isLanguageDecidable(A)
+{
+  forall B:Language :: isLanguageNPTIME1(B) ==> 
+  (exists r:reduction :: isReductionBetweenLanguages(B,A,r))  // INCOMPLET, nu cred ca pot face o functie, imi trebuie o lemma
 }
 type reduction = seq<string>-> seq<string> // ASTA ESTE UN MAPPING REDUCTION, NU POLYNOMIAL REDUCTION 
 
@@ -280,4 +306,7 @@ ghost predicate isReductionBetweenLanguages(A:Language,B:Language,r:reduction)
 // inchidere tranzition
 // reduceable
 // codare a unui limbaj np complete
+//https://lucatrevisan.github.io/30540/notes-np4.pdf
 // https://www.csd.uoc.gr/~hy380/slides/18-NPComplete.pdf
+//https://people.clarkson.edu/~alexis/PCMI/Notes/lectureB07.pdf
+// https://dl.acm.org/doi/epdf/10.1145/1806689.1806724

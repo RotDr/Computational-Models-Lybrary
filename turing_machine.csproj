@@ -12,7 +12,7 @@
 
   
   <ItemGroup>
-      <Compile Include="/home/under/Licenta/Circuit-SAT/turing_machine.cs" />
+      <Compile Include="c:\Users\Under\Licenta\Circuit-SAT\turing_machine.cs" />
 
       <PackageReference Include="System.Runtime.Numerics" Version="4.3.0" />
       <PackageReference Include="System.Collections.Immutable" Version="1.7.1" />
