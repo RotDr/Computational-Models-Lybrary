@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Under\\Licenta\\Circuit-SAT\\turing_machine.csproj": {}
+    "c:\\Users\\Under\\Licenta\\Circuit-SAT\\CircuitSATEncoding.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Under\\Licenta\\Circuit-SAT\\turing_machine.csproj": {
+    "c:\\Users\\Under\\Licenta\\Circuit-SAT\\CircuitSATEncoding.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Under\\Licenta\\Circuit-SAT\\turing_machine.csproj",
-        "projectName": "turing_machine",
-        "projectPath": "C:\\Users\\Under\\Licenta\\Circuit-SAT\\turing_machine.csproj",
+        "projectUniqueName": "c:\\Users\\Under\\Licenta\\Circuit-SAT\\CircuitSATEncoding.csproj",
+        "projectName": "CircuitSATEncoding",
+        "projectPath": "c:\\Users\\Under\\Licenta\\Circuit-SAT\\CircuitSATEncoding.csproj",
         "packagesPath": "C:\\Users\\Under\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Under\\Licenta\\Circuit-SAT\\obj\\",
+        "outputPath": "c:\\Users\\Under\\Licenta\\Circuit-SAT\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Under\\AppData\\Roaming\\NuGet\\NuGet.Config"

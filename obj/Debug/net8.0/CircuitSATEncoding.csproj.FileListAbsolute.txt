@@ -1,0 +1,12 @@
+c:\Users\Under\Licenta\Circuit-SAT\obj\Debug\net8.0\CircuitSATEncoding.GeneratedMSBuildEditorConfig.editorconfig
+c:\Users\Under\Licenta\Circuit-SAT\obj\Debug\net8.0\CircuitSATEncoding.AssemblyInfoInputs.cache
+c:\Users\Under\Licenta\Circuit-SAT\obj\Debug\net8.0\CircuitSATEncoding.AssemblyInfo.cs
+c:\Users\Under\Licenta\Circuit-SAT\obj\Debug\net8.0\CircuitSATEncoding.csproj.CoreCompileInputs.cache
+c:\Users\Under\Licenta\Circuit-SAT\obj\Debug\net8.0\CircuitSATEncoding.sourcelink.json
+c:\Users\Under\Licenta\Circuit-SAT\obj\Debug\net8.0\CircuitSATEncoding.dll
+c:\Users\Under\Licenta\Circuit-SAT\obj\Debug\net8.0\refint\CircuitSATEncoding.dll
+c:\Users\Under\Licenta\Circuit-SAT\obj\Debug\net8.0\CircuitSATEncoding.pdb
+c:\Users\Under\Licenta\Circuit-SAT\CircuitSATEncoding.deps.json
+c:\Users\Under\Licenta\Circuit-SAT\CircuitSATEncoding.dll
+c:\Users\Under\Licenta\Circuit-SAT\obj\Debug\net8.0\ref\CircuitSATEncoding.dll
+c:\Users\Under\Licenta\Circuit-SAT\CircuitSATEncoding.pdb
