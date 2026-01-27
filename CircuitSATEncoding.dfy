@@ -1,259 +1,607 @@
-include "turing_machine.dfy"
-datatype circuitCell = AND | OR | NOT | VARIABLE(x:string) | POZ(i:nat)
-type circuit=seq<circuitCell>
-type certificate=seq<string>
-type stringNat = s: string |
-    |s| > 0 && (|s| > 1 ==> s[0] != '0') &&
-    forall i | 0 <= i < |s| :: s[i] in "0123456789"
-    witness "1"
-predicate isStringAValidNumber (s:string)
-{
-    |s| > 0 && (|s| > 1 ==> s[0] != '0') &&
-    forall i | 0 <= i < |s| :: s[i] in "0123456789"
-}
-  function natToString(n: nat): string
-    ensures isStringAValidNumber(natToString(n))
-   {
-    match n
-    case 0 => "0" case 1 => "1" case 2 => "2" case 3 => "3" case 4 => "4"
-    case 5 => "5" case 6 => "6" case 7 => "7" case 8 => "8" case 9 => "9"
-    case _ => natToString(n / 10) + natToString(n % 10)
-  }
-
-  function stringToNat(s: string): nat
-    decreases |s|
-    requires isStringAValidNumber(s)
-  {
-    if |s| == 1 then
-      match s[0]
-      case '0' => 0 case '1' => 1 case '2' => 2 case '3' => 3 case '4' => 4
-      case '5' => 5 case '6' => 6 case '7' => 7 case '8' => 8 case '9' => 9
-    else
-      stringToNat(s[..|s|-1])*10 + stringToNat(s[|s|-1..|s|])
-  }
-  lemma natToStringThenStringToNatIdem(n: nat)
-    ensures stringToNat(natToString(n)) == n
-  { 
-  }
-  lemma stringToNatThenNatToStringIdem(n: string)
-    requires isStringAValidNumber(n)
-    ensures natToString(stringToNat(n)) == n
-  { 
-  }
-predicate isCircuitCellAPoz (e:circuitCell)
-{
-     match e
-        case POZ(nr) => true
-        case _ => false 
-}
-predicate isCircuitCellAValidPoz (e:circuitCell,poz:nat,c:circuit)
-    requires poz<|c|
-{
-    match e
-        case POZ(nr) => (
-            if 0<=nr<poz-1 then 
-                !isCircuitCellAPoz(c[nr]) 
-            else 
-                false)
-        case _ => false 
-}
-predicate isCktValid(c:circuit)
-{
-    forall pos:nat :: 0<=pos<|c| ==>  match c[pos]
-        case AND => pos<|c|-2 && isCircuitCellAValidPoz(c[pos+1],pos,c) && isCircuitCellAValidPoz(c[pos+2],pos,c)
-        case OR => pos<|c|-2 && isCircuitCellAValidPoz(c[pos+1],pos,c) && isCircuitCellAValidPoz(c[pos+2],pos,c)
-        case NOT => pos<|c|-1 && isCircuitCellAValidPoz(c[pos+1],pos,c) 
-        case VARIABLE (_) => true 
-        case POZ(nr) => ( pos>0 && 0<nr<pos-1 && pos-nr-1>=0)
-}
-predicate isCircuitValid (c:circuit)
-{
-    forall pos:nat :: 0<=pos<|c| ==> isCircuitValid'(c,pos)
-}
-predicate isCircuitValid'(c:circuit, pos:nat)
-    requires pos<|c|
-{
-    match c[pos]
-            case AND => pos<|c|-2 && isCircuitCellAValidPoz(c[pos+1],pos,c) && isCircuitCellAValidPoz(c[pos+2],pos,c)
-            case OR => pos<|c|-2 && isCircuitCellAValidPoz(c[pos+1],pos,c) && isCircuitCellAValidPoz(c[pos+2],pos,c)
-            case NOT => pos<|c|-1 && isCircuitCellAValidPoz(c[pos+1],pos,c) 
-            case VARIABLE (x) => x!="true" && x!="false" 
-            case POZ(nr) => ( pos>0 && 0<nr<pos-1 && pos-nr-1>=0 && !isCircuitCellAPoz(c[nr]))
-}
+include "Certificate.dfy"
+include "Circuit.dfy"
+include "CKTInput.dfy"
 ghost function circuitToInput (c:circuit) : seq<string>
-    requires isCircuitValid(c)
+    requires isCircuitGood(c)
 {
     circuitToInput'(c,0)
 }
-ghost function circuitToInput' (c:circuit,poz:nat) :seq<string>
+function posToInput (e:circuitCell, poz:nat) : string
+    requires isCircuitCellAPoz(e)
+    requires isAGoodPoz(e,poz)
+    ensures isStringAValidNumber(posToInput(e,poz))
+{
+    match e
+        case POZ(nr) =>
+            assert 0<=nr<=poz-1;
+            assert poz-1-nr>=0; 
+            assert poz-1-(poz-1-nr)>=0;
+            natToString(poz-1-nr)
+}
+function inputToPos (s:string, poz:nat) : circuitCell
+    requires isStringAValidNumber(s)
+    requires isAGoodPozInput(s,poz)
+    ensures isCircuitCellAPoz(inputToPos(s,poz)) && isAGoodPoz(inputToPos(s,poz),poz)
+{
+    assert poz-stringToNat(s)-1>=0;
+    assert poz-stringToNat(s)-1<=poz-1; 
+    assert isCircuitCellAPoz( POZ(poz-stringToNat(s)-1));
+    assert isCircuitCellAPoz( POZ(poz-stringToNat(s)-1)) && isAGoodPoz(POZ(poz-stringToNat(s)-1),poz);
+    POZ(poz-stringToNat(s)-1)
+}
+lemma PosAndPOZSymmetry1(s:string,poz:nat)
+    requires isStringAValidNumber(s)
+    requires isAGoodPozInput(s,poz)
+    ensures posToInput(inputToPos(s,poz),poz)==s
+{
+    var n:=inputToPos(s,poz);
+    var nr :| n==POZ(nr);
+    assert nr==poz-stringToNat(s)-1;
+    assert poz-1-(poz-stringToNat(s)-1)==stringToNat(s);
+    stringToNatThenNatToStringIdem(s);
+}
+lemma PosAndPOZSymmetry2 (e:circuitCell,pos:nat)
+    requires isCircuitCellAPoz(e)
+    requires isAGoodPoz(e,pos)
+    ensures isStringAValidNumber(posToInput(e,pos))&& isAGoodPozInput(posToInput(e,pos),pos) && inputToPos(posToInput(e,pos),pos)==e
+{
+    match e
+        case POZ(nr) => 
+            var val := pos - 1 - nr; 
+            natToStringThenStringToNatIdem(val);
+            assert stringToNat(posToInput(e, pos)) == val;
+            assert pos - 1 - val == nr;
+}
+
+function circuitToInput' (c:circuit,poz:nat) :seq<string>
     requires poz<=|c|
-    requires  isCircuitValid(c)
+    requires isCircuitGood(c)
+    ensures |circuitToInput'(c,|c|)|==0
+    ensures poz<|c| ==> |circuitToInput'(c,poz)|==|circuitToInput'(c,poz+1)|+1
     decreases |c|-poz
 {
-    if poz==|c| then []
+    if poz==|c| then 
+    []
     else 
-        match c[poz]
-            case AND => ["AND"]+circuitToInput'(c,poz+1)
-            case OR => ["OR"]+circuitToInput'(c,poz+1)
-            case NOT => ["NOT"]+circuitToInput'(c,poz+1)
-            case VARIABLE(x) => [x]+circuitToInput'(c,poz+1)
-            case POZ(nr) =>
-            assert isCircuitValid'(c, poz);
-            assert 0<nr<poz-1;
-            assert poz-nr-1>0;
-            [natToString(poz-nr-1)]+circuitToInput'(c,poz+1)
+        if isCircuitCellAPoz(c[poz]) then
+            assert isCircuitGood'(c[poz],poz);
+            [posToInput(c[poz],poz)]+circuitToInput'(c,poz+1)
+        else
+            assert isCircuitGood'(c[poz],poz);
+            [gateToString(c[poz])]+circuitToInput'(c,poz+1)
+}
+
+lemma sameCircuitToInputLength(c: circuit, poz: nat)
+    requires isCircuitGood(c)
+    requires poz <= |c|
+    ensures |circuitToInput'(c, poz)| == |c| - poz
+    decreases |c| - poz
+{
+    if poz == |c| {
+    } else {
+        sameCircuitToInputLength(c, poz + 1);
+    }
+}
+
+lemma sameFullCircuitToInputLength(c: circuit)
+    requires isCircuitGood(c)
+    ensures |circuitToInput(c)| == |c|
+{
+    sameCircuitToInputLength(c, 0);
+}
+lemma aValidCircuitIsGood(c:circuit)
+ requires isCircuitValid(c)
+    ensures forall pos:nat::pos<|c| && isCircuitCellAPoz(c[pos]) ==> isAGoodPoz(c[pos],pos)
+    ensures  forall pos:nat::pos<|c| && isCircuitCellAVariable(c[pos]) ==> isAGoodVariableCircuit(c[pos])
+{
+    forall pos:nat | pos<|c|
+        ensures pos<|c| && isCircuitCellAPoz(c[pos]) ==> isAGoodPoz(c[pos],pos)
+        ensures pos<|c| && isCircuitCellAVariable(c[pos]) ==> isAGoodVariableCircuit(c[pos])
+    {
+        aValidCircuitIsGood'(c,pos);
+    }
+}
+lemma aValidCircuitIsGood' (c:circuit,pos:nat)
+    requires isCircuitValid(c)
+    ensures pos<|c| && isCircuitCellAPoz(c[pos]) ==> isAGoodPoz(c[pos],pos)
+    ensures  pos<|c| && isCircuitCellAVariable(c[pos]) ==> isAGoodVariableCircuit(c[pos])
+{
+    if pos>=|c|
+    {
+
+    }
+    else
+    {
+        assert isCircuitValid'(c,pos);
+        if isCircuitCellAPoz(c[pos])
+        {
+            assert isAGoodPoz(c[pos],pos);
+        }
+        if isCircuitCellAVariable(c[pos])
+        {
+            assert isAGoodVariableCircuit(c[pos]);
+        }
+    }
+}
+function gateToString(e:circuitCell) : string
+    requires !isCircuitCellAPoz(e)
+    requires isCircuitCellAVariable(e) ==> isAGoodVariableCircuit(e)
+    ensures !isStringAValidNumber(gateToString(e))
+    ensures isCircuitCellAVariable(e) ==> !(gateToString(e) in ReservedWords)
+{
+    match e
+        case AND => "AND"
+        case OR => "OR"
+        case NOT => "NOT"
+        case VARIABLE(x) => x
 
 }
-function inputToCircuit (input:seq<string>) : Option<circuit>
+function stringToGate(s:string):circuitCell
+    requires !isStringAValidNumber(s)
+    requires !(s in ["AND","OR","NOT"]) ==> !(s in ReservedWords)
+    ensures !(s in ReservedWords) ==> isCircuitCellAVariable(stringToGate(s)) && isAGoodVariableCircuit(stringToGate(s))
+{
+    match s
+        case "AND" => AND
+        case "OR" => OR
+        case "NOT" => NOT
+        case x => VARIABLE(x)
+}
+lemma gateAndStringSymmetry1(e:circuitCell)
+    requires !isCircuitCellAPoz(e)
+    requires isCircuitCellAVariable(e) ==> isAGoodVariableCircuit(e)
+    ensures !isStringAValidNumber(gateToString(e)) && stringToGate(gateToString(e))==e
+{
+
+}
+lemma gateAndStringSymmetry2(s:string)
+    requires !isStringAValidNumber(s)
+    requires !(s in ["AND","OR","NOT"]) ==> !(s in ReservedWords)
+    ensures gateToString(stringToGate(s))==s
+{
+
+}
+function inputToCircuit (input:seq<string>) : circuit
+    requires isInputGoodForCKT(input)
+
  {
      inputToCircuit'(input,0)
  }
-function inputToCircuit' (input:seq<string>,pos:nat) : Option<circuit>
+function inputToCircuit' (input:seq<string>,pos:nat) : circuit
     requires pos<=|input|
+    requires isInputGoodForCKT(input)
     decreases |input|-pos
+    ensures |inputToCircuit'(input,|input|)|==0
+    ensures pos<|input| ==> |inputToCircuit'(input,pos)|==|inputToCircuit'(input,pos+1)|+1
 {
-    if pos==|input| then Some([])
+    if pos==|input| then []
     else
-        match stringToCircuitCell(input[pos],pos)
-            case Some(g) =>(
-                match inputToCircuit'(input,pos+1)
-                    case Some(l) => Some([g]+l)
-                    case None => None
-            )
-            case None=> None
-}
-function stringToCircuitCell(s:string,pos:nat) : Option<circuitCell>
-{
-    if s=="AND" then Some(AND) 
-    else
-    if s=="OR" then Some(OR) 
-    else 
-    if s=="NOT" then Some(NOT)
-    else
-    if isStringAValidNumber(s) then 
-        if (pos-stringToNat(s)-1<=0) then
-            None
-        else 
-            Some(POZ(pos-stringToNat(s)-1))
-
-    else
-        Some(VARIABLE(s))
-}
-predicate isCertificateCorrectForm (k:certificate)
-{
-    (|k|>0 && |k|%2==0) && forall pos:nat:: pos<|k| ==> (if pos%2==0 then 
-    (k[pos]!="true" && k[pos]!="false") 
-    else (k[pos]=="true" || k[pos]=="false"))     
-}
-predicate isCertificateValid (c:circuit,k:certificate)
-    requires isCertificateCorrectForm(k)
-{
-     forall pos:nat:: pos<|c| ==> variableHasValue(c,k,pos)
- }
- predicate variableHasValue(c:circuit,k:certificate,pos:nat)
-    requires pos<|c|
- {
-    match c[pos] 
-                 case VARIABLE(x) => exists poz:nat :: (poz<|k|-1 && (
-                     k[poz]==x && (k[poz+1]=="true" && k[poz+1]=="false"))) 
-                 case _ => true
- }
-function getValueFromCertificate (v:string,k:certificate):Option<bool>
-     requires v!="false" && v!="true"
-     requires isCertificateCorrectForm (k)
-
-{
-    getValueFromCertificate'(v,k,0)
-}
-function getValueFromCertificate'(v:string,k:certificate,pos:nat):Option<bool>
-    requires pos<|k|
-    requires v!="false" && v!="true"
-    decreases |k|-pos
-    ensures getValueFromCertificate'(v,k,pos)!=None <==>exists poz:nat :: (poz<|k|-1 && (
-                    k[poz]==v && (k[poz+1]=="true" || k[poz+1]=="false")))
-    requires forall poz:nat ::poz<pos ==> k[poz]!=v
-    ensures forall poz:nat ::poz<pos ==>  k[poz]!=v
-    requires isCertificateCorrectForm(k)
-
-{
-    if pos==|k|-1 then None
-    else
-        if k[pos]==v then(
-            assert  v!="false" && v!="true";
-            assert k[pos]!="false" && k[pos]!="true";
-            assert k[pos+1]=="true" || k[pos+1]=="false";
-            if k[pos+1]=="true" then 
-                Some(true)
-            else
-                Some(false)
-            )
+        if isStringAValidNumber(input[pos]) then 
+            [inputToPos(input[pos],pos)]+inputToCircuit'(input,pos+1)
         else
-            getValueFromCertificate'(v,k,pos+1)
+            [stringToGate(input[pos])]+inputToCircuit'(input,pos+1)
 }
-predicate solveCircuit(c:circuit,k:certificate)
-    requires isCircuitValid(c)
-    requires isCertificateCorrectForm(k)
-    requires isCertificateValid(c,k)
-    requires |c|>=1
+lemma sameInputToCircuitLength(input:seq<string>, poz: nat)
+    requires isInputGoodForCKT(input)
+    requires poz <= |input|
+    ensures |inputToCircuit'(input, poz)| == |input| - poz
+    decreases |input| - poz
 {
-    solveCircuit'(c,k,|c|-1)
+    if poz == |input| {
+    } else {
+        sameInputToCircuitLength(input, poz + 1);
+    }
 }
-function getNumberFromPoz(e:circuitCell) : nat
-    requires isCircuitCellAPoz(e)
-{
-    match e
-        case POZ(nr) => nr
-}
-predicate solveCircuit'(c:circuit,k:certificate,pos:nat)
-    requires isCircuitValid(c)
-    requires isCertificateCorrectForm(k)
-    requires isCertificateValid(c,k)
-    requires |c|>=1
-    requires pos<|c|
-    decreases pos
-{
 
-    match c[pos]
-        case AND =>  
-            assert  isCircuitValid'(c, pos);    
-            solveCircuit'(c,k,getNumberFromPoz(c[pos+1])) && solveCircuit'(c,k,getNumberFromPoz(c[pos+2]))
-        case OR  =>
-            assert  isCircuitValid'(c, pos);      
-        solveCircuit'(c,k,getNumberFromPoz(c[pos+1])) || solveCircuit'(c,k,getNumberFromPoz(c[pos+2]))
-        case NOT  =>
-            assert  isCircuitValid'(c, pos);         
-        !solveCircuit'(c,k,getNumberFromPoz(c[pos+1]))
-        case VARIABLE (x) =>( assert isCircuitValid'(c,pos);     
-            match getValueFromCertificate(x,k)
-                                        case Some(st) => st
-                                        case None => false )
-        case POZ(nr)=>
-            assert  isCircuitValid'(c, pos);
-            solveCircuit'(c,k,nr)
+lemma sameFullInputToCircuitLength(input:seq<string>)
+    requires isInputGoodForCKT(input)
+    ensures |inputToCircuit(input)| == |input|
+{
+    sameInputToCircuitLength(input, 0);
 }
-ghost predicate checkSatisfaction(c:circuit)
+ghost predicate isInputGoodForCKT (input:seq<string>)
+{
+    (forall pos:nat::pos<|input| && isStringAValidNumber(input[pos]) ==> isAGoodPozInput(input[pos],pos)) &&
+    forall pos:nat::pos<|input| && !isStringAValidNumber(input[pos]) && !(input[pos] in ["AND","OR","NOT"])==> !(input[pos] in ReservedWords) 
+}
+lemma aCKTInputIsGood (input:seq<string>)
+    requires isInputCKT(input)
+    ensures isInputGoodForCKT(input)
+{
+     forall pos:nat | pos<|input|
+        ensures pos<|input| && isStringAValidNumber(input[pos]) ==> isAGoodPozInput(input[pos],pos)
+        ensures pos<|input| && !isStringAValidNumber(input[pos]) && !(input[pos] in ["AND","OR","NOT"]) ==> !(input[pos] in ReservedWords)
+    {
+        assert isInputCKT'(input,pos);
+        if isStringAValidNumber(input[pos])
+        {
+            assert isAGoodPozInput(input[pos],pos);
+        }
+    }
+}
+
+lemma inputCircuitSymmetry1(input: seq<string>)
+    requires isInputGoodForCKT(input)
+    ensures isCircuitGood(inputToCircuit(input)) 
+    ensures circuitToInput(inputToCircuit(input)) == input 
+{
+    sameFullInputToCircuitLength(input);
+    assert |inputToCircuit(input)|==|input|;
+    FullInputCircuitSymmetry(input, 0);
+}
+lemma Lemma_InputToCircuit_IsGood(input: seq<string>)
+    requires isInputGoodForCKT(input)
+    ensures isCircuitGood(inputToCircuit(input))
+{
+    var c := inputToCircuit(input);
+    forall poz | 0 <= poz < |c|
+        ensures isCircuitGood'(c[poz], poz)
+    {
+        sameFullInputToCircuitLength(input);
+        Lemma_NthElement_Bridge(input, 0, poz); 
+
+        if isStringAValidNumber(input[poz]) {
+            assert c[poz] == inputToPos(input[poz], poz);
+        } else {
+            assert c[poz] == stringToGate(input[poz]);
+        }
+    }
+}
+
+lemma Lemma_NthElement_Bridge(input: seq<string>, current: nat, target: nat)
+    requires isInputGoodForCKT(input)
+    requires current <= target < |input|
+    ensures var c_sub := inputToCircuit'(input, current);
+            target - current < |c_sub| &&
+            (if isStringAValidNumber(input[target]) 
+             then c_sub[target - current] == inputToPos(input[target], target) 
+             else c_sub[target - current] == stringToGate(input[target]))
+    decreases target - current
+{
+    if current == target {
+    } else {
+        Lemma_NthElement_Bridge(input, current + 1, target);
+    }
+}
+lemma NthElementBridge(c:circuit, current:nat, target:nat)
+    requires isCircuitGood(c)
+    requires current <= target <|c|
+    ensures var i_sub := circuitToInput'(c,current);
+            target-current<|i_sub| &&
+            (
+                if isCircuitCellAPoz(c[target])
+                then i_sub[target-current] == posToInput(c[target],target)
+                else i_sub[target-current] == gateToString(c[target])
+            )
+    decreases target - current
+{
+ if current == target {
+    } else {
+        NthElementBridge(c, current + 1, target);
+    }
+}
+lemma FullInputCircuitSymmetry(input: seq<string>, k: nat)
+    requires isInputGoodForCKT(input) && k <= |input|
+    requires |inputToCircuit(input)|==|input|
+    ensures isCircuitGood(inputToCircuit(input))
+    ensures var c := inputToCircuit(input);
+            assert |c|==|input|;
+            (forall p :: k <= p < |c| ==> isCircuitGood'(c[p], p)) &&
+            circuitToInput'(c, k) == input[k..]
+    decreases |input| - k
+{
+    Lemma_InputToCircuit_IsGood(input);
+    var c := inputToCircuit(input);
+
+    if k < |input| {
+
+        FullInputCircuitSymmetry(input, k + 1);
+        if isStringAValidNumber(input[k]) {
+            Lemma_NthElement_Bridge(input, 0, k);
+            PosAndPOZSymmetry1(input[k], k); 
+        } else {
+            Lemma_NthElement_Bridge(input, 0, k);
+            gateAndStringSymmetry2(input[k]); 
+        }
+        
+    }
+}
+// lemma validCircuitGivesCKTInput(c:circuit)
+//     requires isCircuitValid(c)
+//     ensures  isCircuitGood(c) && isInputCKT(circuitToInput(c))
+// {
+//     aValidCircuitIsGood(c);
+//     var input:= circuitToInput(c);
+//     sameFullCircuitToInputLength(c);
+//     assert |c|==|input|;
+//     forall i|0<=i< |input|
+//         ensures isInputCKT'(input,i)
+//         {
+//             NthElementBridge(c,0,i);
+//                 match c[i]
+//                     case POZ(n)=>
+//                     {
+
+//                         assert isCircuitValid'(c,i);
+//                         assert n<i;
+//                         assert !isCircuitCellAPoz(c[n]);
+//                         assert input[i]==posToInput(c[i],i);
+//                         assert input[i]==natToString(i-1-n);
+//                         assert isStringAValidNumber(input[i]);
+//                         natToStringThenStringToNatIdem(i-1-n);
+//                         assert stringToNat(input[i])==i-1-n;
+//                         var nr := i -stringToNat(input[i])-1;
+//                         assert nr==i-(i-1-n)-1;
+//                         assert nr==n;
+//                         NthElementBridge(c,0,n);
+//                         assert input[n]==gateToString(c[n]);
+//                         assert !isStringAValidNumber(input[n]);
+//                         assert  isStringAValidPos(input, i);
+//                     }
+//                     case AND=>
+//                     {
+//                         assert isCircuitValid'(c, i);
+//                         NthElementBridge(c, 0, i-1);
+//                         NthElementBridge(c, 0, i-2);
+                        
+//                         assert isStringAValidNumber(input[i-1]) && isStringAValidPos(input, i-1);
+//                         assert isStringAValidNumber(input[i-2]) && isStringAValidPos(input, i-2);
+//                             }
+//                     case OR=>
+//                     {
+//                             assert isCircuitValid'(c, i);
+//                             NthElementBridge(c, 0, i-1);
+//                             NthElementBridge(c, 0, i-2);
+                            
+//                             assert isStringAValidNumber(input[i-1]) && isStringAValidPos(input, i-1);
+//                             assert isStringAValidNumber(input[i-2]) && isStringAValidPos(input, i-2);
+
+//                     }
+//                     case NOT=>
+//                     {
+//                         assert isCircuitValid'(c, i);
+//                         NthElementBridge(c, 0, i-1);
+//                         assert isCircuitCellAPoz(c[i-1]);
+//                         assert isStringAValidNumber(input[i-1]) && isStringAValidPos(input, i-1);
+//                     }
+//                     case VARIABLE(X)=>
+//                     {
+//                         assert input[i] == gateToString(c[i]);
+//                         assert !isStringAValidNumber(input[i]);
+//                         assert !(input[i] in ReservedWords);
+//                     }
+//             }
+// }
+lemma validCircuitGivesCKTInput(c: circuit)
     requires isCircuitValid(c)
+    ensures isCircuitGood(c) && isInputCKT(circuitToInput(c))
 {
-    exists k:certificate :: isCertificateCorrectForm(k) && isCertificateValid(c,k) && |c|>=1 && solveCircuit(c,k)
+    aValidCircuitIsGood(c);
+    var input:= circuitToInput(c);
+    sameFullCircuitToInputLength(c);
+    assert |c|==|input|;
+
+    forall i | 0<=i<|input|
+        ensures isInputCKT'(input,i)
+    {
+        NthElementBridge(c,0,i);
+        match c[i]
+            case POZ(n) =>
+                assert isCircuitValid'(c,i);
+                assert n<i;
+                assert !isCircuitCellAPoz(c[n]);
+
+
+                var nr:=i-1-stringToNat(input[i]);
+                // assert nr == n;
+                // assert input[n] == gateToString(c[n]);
+
+                // assert !isStringAValidNumber(input[n]);
+                // assert isStringAValidPos(input, i);
+            case AND=>
+                assert isCircuitValid'(c, i);
+                NthElementBridge(c, 0, i-1);
+                NthElementBridge(c, 0, i-2);
+                
+                assert isStringAValidNumber(input[i-1]) && isStringAValidPos(input, i-1);
+                assert isStringAValidNumber(input[i-2]) && isStringAValidPos(input, i-2);
+            case OR =>
+                assert isCircuitValid'(c, i);
+                NthElementBridge(c, 0, i-1);
+                NthElementBridge(c, 0, i-2);
+                
+                assert isStringAValidNumber(input[i-1]) && isStringAValidPos(input, i-1);
+                assert isStringAValidNumber(input[i-2]) && isStringAValidPos(input, i-2);
+            case NOT =>
+                assert isCircuitValid'(c, i);
+                NthElementBridge(c, 0, i-1);
+                assert isStringAValidNumber(input[i-1]) && isStringAValidPos(input, i-1);
+         
+    }
 }
-ghost predicate isThatActuallyTheCKTSATLanguage (l:Language) 
+lemma cktInputGivesValidCircuit(input:seq<string>)
+    requires isInputCKT(input)
+    ensures isInputGoodForCKT(input) && isCircuitValid(inputToCircuit(input))
 {
-    (forall input:seq<string> :: (input in l) ==> ( match inputToCircuit(input)
-                                                       case Some(c)=>isCircuitValid(c) && checkSatisfaction(c)
-                                                       case None=> false))
-    &&
-    (forall c:circuit :: isCircuitValid(c) && checkSatisfaction(c) ==>
-    (circuitToInput(c) in l))
+    aCKTInputIsGood(input);
+
+    var c := inputToCircuit(input);
+    sameFullInputToCircuitLength(input);
+    assert |c| == |input|;
+    forall i | 0 <= i < |c|
+        ensures isCircuitValid'(c, i)
+    {
+        Lemma_NthElement_Bridge(input, 0, i);
+        assert isInputCKT'(input, i); 
+
+        if isStringAValidNumber(input[i]) {
+
+            var s := input[i];
+            var nr := i - stringToNat(s) - 1;
+
+            assert c[i] == inputToPos(s, i);
+
+            assert isStringAValidPos(input, i); 
+            assert !isStringAValidNumber(input[nr]);
+
+            Lemma_NthElement_Bridge(input, 0, nr);
+            assert c[nr] == stringToGate(input[nr]); 
+            assert !isCircuitCellAPoz(c[nr]);
+
+        } else {
+
+            assert c[i] == stringToGate(input[i]);
+
+            if input[i] == "AND" {
+                assert i > 2; 
+                Lemma_NthElement_Bridge(input, 0, i-1);
+                Lemma_NthElement_Bridge(input, 0, i-2);
+                
+                assert isStringAValidNumber(input[i-1]); 
+                assert isStringAValidNumber(input[i-2]);
+
+                assert c[i-1] == inputToPos(input[i-1], i-1);
+                assert c[i-2] == inputToPos(input[i-2], i-2);
+                assert isCircuitCellAPoz(c[i-1]) && isCircuitCellAPoz(c[i-2]);
+
+            } else if input[i] == "OR" {
+                assert i > 2;
+                Lemma_NthElement_Bridge(input, 0, i-1);
+                Lemma_NthElement_Bridge(input, 0, i-2);
+                assert isCircuitCellAPoz(c[i-1]) && isCircuitCellAPoz(c[i-2]);
+
+            } else if input[i] == "NOT" {
+                assert i > 1;
+                Lemma_NthElement_Bridge(input, 0, i-1);
+                assert isCircuitCellAPoz(c[i-1]);
+
+            } else {
+            }
+        }
+    }
 }
+
+// lemma inputCircuitSymmetry2 (c:circuit)
+//     requires isCircuitGood(c)
+//     ensures isCircuitGood(c) && isInputGoodForCKT(circuitToInput(c)) && inputToCircuit(circuitToInput(c))==c 
+// {
+
+// }
+// lemma aCKTInputGivesAValidCircuit (input:seq<string>)
+//     requires isInputCKT(input)
+//     ensures isCircuitValid(inputToCircuit(input))
+// {
+//     matchInputCircuit (input,inputToCircuit(input),|input|-1);
+// }
+// lemma matchInputCircuit (input:seq<string>,c:circuit,pos:int)
+//      requires isInputCKT(input)
+//      requires -1<=pos<|input| 
+//      ensures 0<=pos<|c| ==> isCircuitValid'(c,pos)
+//      decreases pos 
+// {
+//     if pos ==-1{
+//         assert c==[];
+//     }
+//     else
+//     {
+//         match input[pos] {
+//             case "AND" => {
+//                 assert isInputCKT'(input,pos);
+//                 var prefix_c := inputToCircuit'(input, pos - 3);
+//                 matchInputCircuit(input, prefix_c, pos - 3);
+//                 var pos1:=inputToPos(input, pos - 2);
+//                 var pos2:= inputToPos(input, pos - 1);
+//                 var ext := [pos1,pos2, AND];
+//                 assert match pos1
+//                         case POZ(nr) => nr==(pos-2)-stringToNat(input[pos-2])-1 && 0<=nr<(pos-2-1);
+//                 assert match pos2
+//                         case POZ(nr) => nr==(pos-1)-stringToNat(input[pos-1])-1 && 0<=nr<(pos-1-1);
+//                 assert c== inputToCircuit'(input,pos-3)+[inputToPos(input,pos-2),inputToPos(input,pos-1),AND];
+//                 assert c == prefix_c + ext;
+//                 Lemma_ValidCircuitExtension(prefix_c, ext);
+//             }
+//             case "OR" => {
+//                 var prefix_c := inputToCircuit'(input, pos - 3);
+//                 matchInputCircuit(input, prefix_c, pos - 3);
+//                 var ext := [inputToPos(input, pos - 2), inputToPos(input, pos - 1), OR];
+//                 assert c == prefix_c + ext;
+//                 Lemma_ValidCircuitExtension(prefix_c, ext);
+//             }
+//             case "NOT" => {
+//                 var prefix_c := inputToCircuit'(input, pos - 2);
+//                 matchInputCircuit(input, prefix_c, pos - 2);
+//                 var ext := [inputToPos(input, pos - 1), NOT];
+//                 assert c == prefix_c + ext;
+//                 Lemma_ValidCircuitExtension(prefix_c, ext);
+//             }
+//             case x => {
+//                 var prefix_c := inputToCircuit'(input, pos - 1);
+//                 matchInputCircuit(input, prefix_c, pos - 1);
+//                 var ext := if isStringAValidNumber(x) then [inputToPos(input, pos)] else [VARIABLE(x)];
+//                 assert c == prefix_c + ext;
+//                 Lemma_ValidCircuitExtension(prefix_c, ext);
+//             }
+//         }
+//     }
+// }
+// ghost predicate isThatActuallyTheCKTSATLanguage (l:Language) 
+// {
+//     (forall input:seq<string> :: (input in l) ==> ( isInputCKT(input) && isCircuitValid(inputToCircuit(input)) && checkSatisfaction(inputToCircuit(input))
+//     ))
+//     &&
+//     (forall c:circuit :: isCircuitValid(c) && checkSatisfaction(c) ==>
+//     (circuitToInput(c) in l))
+// }
+
+// predicate isCircuitValid'(c:circuit, pos:nat)
+//     requires pos<|c|
+// {
+//     match c[pos]
+//             case AND => 2<pos<|c| && isCircuitCellAPoz(c[pos-1]) && isCircuitCellAPoz(c[pos-2])
+//             case OR => 2<pos<|c|  && isCircuitCellAPoz(c[pos-1]) && isCircuitCellAPoz(c[pos-2])
+//             case NOT => 1<pos<|c| && isCircuitCellAPoz(c[pos-1]) 
+//             case VARIABLE (x) => x!="true" && x!="false"  
+//             case POZ(nr) => isCircuitCellAValidPoz(c[pos],pos,c) && 0<pos
+// }
 predicate areTwoCircuitsTheSame (c1:circuit,c2:circuit)
-    ensures areTwoCircuitsTheSame (c1,c2) ==> |c1|==|c2| &&
 {
     |c1|==|c2| && forall pos:nat::pos<|c1| ==> c1[pos]==c2[pos]
 }
-lemma circuitAndInput()
-    ensures forall c:circuit:: isCircuitValid(c) ==> (match inputToCircuit(circuitToInput(c))
-                                                        case None => false
-                                                        case Some(c2)=> areTwoCircuitsTheSame(c,c2) )
-{
+// lemma sameSizeCircuitToInput(c:circuit)
+//     requires forall poz:nat::poz<|c| ==> isThatPOZValid(c,poz) 
+//     ensures |c|==|circuitToInput(c)|
+//     ensures forall poz:nat::poz<|c| ==> isThatPOZValid(c,poz) 
+// {
+//     if c==[] {
+//         assert |c|==0;
+//         assert circuitToInput(c)==circuitToInput'(c,0);
+//         assert circuitToInput'(c,0)==circuitToInput'(c,|c|);
+//         assert |circuitToInput'(c,|c|)|==0;
+//         assert |circuitToInput(c)|==0;
+//         assert |c|==0;
+//         assert |circuitToInput(c)|==|c|;
+//     }
+//     else
+//     {
+//         assert forall poz:nat::poz<|c|-1 ==> isThatPOZValid(c,poz);
+//         assert forall poz:nat::poz<|c|-1 ==> c[poz]==c[..|c|-1][poz];
+//         assert forall poz:nat::poz<|c|-1 && c[poz]==c[..|c|-1][poz] ==> isThatPOZValid(c[..|c|-1],poz);
+//         assert forall poz:nat::poz<|c|-1 ==> isThatPOZValid(c[..|c|-1],poz);
+//         sameSizeCircuitToInput(c[..|c|-1]);
+//     }
+// }
+// lemma circuitAndInput()
+//     ensures forall c:circuit:: isCircuitValid(c) ==> (match inputToCircuit(circuitToInput(c))
+//                                                         case None => false
+//                                                         case Some(c2)=> areTwoCircuitsTheSame(c,c2) )
+// {
+//     var c :| isCircuitValid(c);
+//     var input:| input==circuitToInput(c);
 
-}
+//     assert forall pos:nat:: pos<|c| ==> match c[pos]
+//                                             case AND=> input[pos]=="AND"
+//                                             case OR=> input[pos]=="OR"
+//                                             case NOT=> input[pos]=="NOT"
+//                                             case POZ(nr)=> input[pos]==natToString(pos-nr-1);
+                                            
+// }
