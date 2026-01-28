@@ -17,7 +17,7 @@ predicate isAGoodPoz (e:circuitCell,poz:nat)
 {
     match e
         case POZ(nr) => (
-            0<=nr<=poz-1)
+            0<=nr<poz)
 }
 predicate isCircuitGood(c:circuit)
 {
@@ -42,8 +42,37 @@ predicate isCircuitValid'(c:circuit, pos:nat)
             case AND => 2<pos<|c| && isCircuitCellAPoz(c[pos-1]) && isCircuitCellAPoz(c[pos-2])
             case OR => 2<pos<|c|  && isCircuitCellAPoz(c[pos-1]) && isCircuitCellAPoz(c[pos-2])
             case NOT => 1<pos<|c| && isCircuitCellAPoz(c[pos-1]) 
-            case VARIABLE (x) => true // numele variabilei va fi pierduta in traducere
+            case VARIABLE (x) => true   //( forall poz:nat:: poz<|c| && isCircuitCellAVariable(c[poz]) && poz!=pos 
+                                                //==> match c[poz] 
+                                                //    case VARIABLE(y) => x!=y)
             case POZ(nr) => isAGoodPoz(c[pos],pos) && !isCircuitCellAPoz(c[nr])
+}
+lemma aValidCircuitIsGood(c:circuit)
+ requires isCircuitValid(c)
+    ensures forall pos:nat::pos<|c| && isCircuitCellAPoz(c[pos]) ==> isAGoodPoz(c[pos],pos)
+{
+    forall pos:nat | pos<|c|
+        ensures pos<|c| && isCircuitCellAPoz(c[pos]) ==> isAGoodPoz(c[pos],pos)
+    {
+        aValidCircuitIsGood'(c,pos);
+    }
+}
+lemma aValidCircuitIsGood' (c:circuit,pos:nat)
+    requires isCircuitValid(c)
+    ensures pos<|c| && isCircuitCellAPoz(c[pos]) ==> isAGoodPoz(c[pos],pos)
+{
+    if pos>=|c|
+    {
+
+    }
+    else
+    {
+        assert isCircuitValid'(c,pos);
+        if isCircuitCellAPoz(c[pos])
+        {
+            assert isAGoodPoz(c[pos],pos);
+        }
+    }
 }
 predicate isThatPOZValid(c:circuit,pos:nat)
     requires pos<|c|
@@ -51,6 +80,10 @@ predicate isThatPOZValid(c:circuit,pos:nat)
     match c[pos]
          case POZ(nr) =>  pos>0 && 0<nr<pos-1 && pos-nr-1>=0 && !isCircuitCellAPoz(c[nr])
          case _=>true
+}
+predicate areTwoCircuitsTheSame (c1:circuit,c2:circuit)
+{
+    |c1|==|c2| && forall pos:nat::pos<|c1| ==> c1[pos]==c2[pos]
 }
 function nthVariableCircuit (c:circuit, pos:nat) : nat
     requires pos<|c|
@@ -109,18 +142,18 @@ function getValueFromCertificate(c:circuit,pos:nat,k:certificate) : bool
     else 
         false
 }
- lemma Lemma_ValidCircuitExtension(c: circuit, ext: seq<circuitCell>)
-    requires isCircuitValid(c)
-    requires forall k :: |c| <= k <|c|+ |ext| ==> isCircuitValid'(c + ext, k)
-    ensures isCircuitValid(c + ext)
-{
-    var combined := c + ext;
+//  lemma ValidCircuitExtension(c: circuit, ext: seq<circuitCell>)
+//     requires isCircuitValid(c)
+//     requires forall k :: |c| <= k <|c|+ |ext| ==> isCircuitValid'(c + ext, k)
+//     ensures isCircuitValid(c + ext)
+// {
+//     var combined := c + ext;
 
-    assert forall i :: 0 <= i < |c| ==> combined[i] == c[i];
-    assert forall i :: 0 <= i < |c| ==> isCircuitValid'(c, i);
-    assert forall i :: 0 <= i < |c| && isCircuitValid'(c,i)==> isCircuitValid'(combined, i);
-    assert isCircuitValid(combined);
-}
+//     assert forall i :: 0 <= i < |c| ==> combined[i] == c[i];
+//     assert forall i :: 0 <= i < |c| ==> isCircuitValid'(c, i);
+//     assert forall i :: 0 <= i < |c| && isCircuitValid'(c,i) && !isCircuitCellAVariable(c[i])==> isCircuitValid'(combined, i);
+//     assert isCircuitValid(combined);
+// }
 predicate solveCircuit(c:circuit,k:certificate)
     requires isCircuitValid(c)
     requires isCertificateCorrectForm(k)

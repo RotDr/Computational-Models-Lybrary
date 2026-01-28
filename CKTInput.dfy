@@ -9,10 +9,15 @@ predicate isStringAGate(str:string)
 {
     str=="AND" || str=="OR" || str=="NOT"
 }
-predicate isAGoodPozInput(nr:string,poz:nat)
-    requires isStringAValidNumber(nr)
+predicate isInputGoodForCKT(input:seq<string>)
 {
-    poz-1-stringToNat(nr)>=0
+    forall pos:nat::pos<|input| ==> isStringGoodForCKT(input[pos],pos)
+}
+predicate isStringGoodForCKT(str:string,pos:nat)
+{
+    if !isStringAValidNumber(str) then (str in ["AND","OR","NOT","VARIABLE"])
+    else
+        stringToNat(str)<pos
 }
 predicate isAGoodVariableInput(x:string)
 {
@@ -28,13 +33,31 @@ predicate isInputCKT' (input:seq<string>, pos:nat) // nu mai ai nume custom pent
     requires pos<|input|
 {
     match input[pos]
-        case "AND" => 2<pos<|input| && isStringAValidNumber(input[pos-1]) && isStringAValidPos(input, pos-1) && isStringAValidNumber(input[pos-2]) && isStringAValidPos(input, pos-2)
-        case "OR" => 2<pos<|input| && isStringAValidNumber(input[pos-1]) && isStringAValidPos(input, pos-1) && isStringAValidNumber(input[pos-2]) && isStringAValidPos(input, pos-2)
+        case "AND" => 2<pos<|input| && isStringAValidNumber(input[pos-1]) && isStringAValidNumber(input[pos-2]) 
+        case "OR" => 2<pos<|input| && isStringAValidNumber(input[pos-1]) && isStringAValidNumber(input[pos-2])
         case "NOT" => 1<pos<|input|&& isStringAValidNumber(input[pos-1]) && isStringAValidPos(input, pos-1) 
         case "VARIABLE" => true
-        case x => false 
+        case x => isStringAValidNumber(x) && isStringAValidPos(input,pos)
 }
+lemma aCKTInputIsGood (input:seq<string>)
+    requires isInputCKT(input)
+    ensures isInputGoodForCKT(input)
+{
+     for pos:=0 to |input|
+        invariant 0 <= pos <= |input|
+        invariant forall k :: 0 <= k < pos ==> isStringGoodForCKT(input[k],k)
+    {
+        if pos<|input| 
+        {
+            assert isInputCKT'(input,pos);
+            if isStringAValidNumber(input[pos])
+            {
 
+            }
+        }
+    }    
+    assert forall pos:nat::pos<|input| ==> isStringGoodForCKT(input[pos],pos);
+}
  lemma ValidInputExtension(input: seq<string>, ext: seq<string>)
     requires isInputCKT(input)
     requires forall k :: |input| <= k <|input|+ |ext| ==> isInputCKT'(input + ext, k)
@@ -109,3 +132,21 @@ ghost predicate AdditionalTapeSymbolsForCKT(inputS:InputSymbols,l:Language,addTa
 {
     isTapeSymbolsValid(inputS,addTapeS)
 }
+
+predicate isCKTInputString(s: string)
+{
+  isStringAValidNumber(s)
+  || s == "AND"
+  || s == "OR"
+  || s == "NOT"
+  || s == "VARIABLE"
+  || s == "TRUE"
+  || s == "FALSE"
+}
+predicate isCKTInputSymbol(sym: Symbol)
+{
+  match sym
+    case NonBlankSymbol(s) => isCKTInputString(s)
+    case Blank => false
+}
+
