@@ -100,36 +100,36 @@ function initialConfiguration (input: seq<string>, q:State, inputS:InputSymbols)
 {
     Configuration(q,initialTape(input),0)
 }
-// method runDTM(delta : Transitions, input : seq<string>, q0:State,inputS:InputSymbols,AddTapeS:AdditionalTapeSymbols) returns (con:Option<Configuration>) // trebuie o stare initiala
-//   requires isTapeSymbolsValid(inputS,AddTapeS)
-//   requires isInputValid(input,inputS)
-//   requires isTransitionsValid(delta,inputS,AddTapeS)
-//   requires isTransitionsDeterministic(delta,inputS,AddTapeS)
-//   decreases *
-// {
-//     var config:=initialConfiguration(input,q0,inputS);
-//     var m:=runDTM'(delta,config,inputS,AddTapeS);
-//     return m;
-// }
-// method runDTM'(delta:Transitions,config:Configuration,inputS:InputSymbols,AddTapeS:AdditionalTapeSymbols) returns (con: Option<Configuration>)
-//   requires isTapeSymbolsValid(inputS,AddTapeS)
-//   requires isTransitionsValid(delta,inputS,AddTapeS)
-//   requires isTransitionsDeterministic(delta,inputS,AddTapeS)
-//   decreases *
-// {
-//     match config
-//         case Configuration(q,tape,head)    => match q
-//                                             case FinalState(_,finale) => return Some(config);
-//                                             case NormalState(q0) =>{ 
-//                                                 var conf:=applyTransition(config,delta,0);
-//                                                 match conf 
-//                                                     case Some(c) =>{
-//                                                      var r:=runDTM'(delta,c,inputS,AddTapeS);
-//                                                       return r;
-//                                                     }
-//                                                     case None => return None;
-//                                             }
-// }
+method runDTM(delta : Transitions, input : seq<string>, q0:State,inputS:InputSymbols,AddTapeS:AdditionalTapeSymbols) returns (con:Option<Configuration>) // trebuie o stare initiala
+  requires isTapeSymbolsValid(inputS,AddTapeS)
+  requires isInputValid(input,inputS)
+  requires isTransitionsValid(delta,inputS,AddTapeS)
+  requires isTransitionsDeterministic(delta,inputS,AddTapeS)
+  decreases *
+{
+    var config:=initialConfiguration(input,q0,inputS);
+    var m:=runDTM'(delta,config,inputS,AddTapeS);
+    return m;
+}
+method runDTM'(delta:Transitions,config:Configuration,inputS:InputSymbols,AddTapeS:AdditionalTapeSymbols) returns (con: Option<Configuration>)
+  requires isTapeSymbolsValid(inputS,AddTapeS)
+  requires isTransitionsValid(delta,inputS,AddTapeS)
+  requires isTransitionsDeterministic(delta,inputS,AddTapeS)
+  decreases *
+{
+    match config
+        case Configuration(q,tape,head)    => match q
+                                            case FinalState(_,finale) => return Some(config);
+                                            case NormalState(q0) =>{ 
+                                                var conf:=applyTransition(config,delta,0);
+                                                match conf 
+                                                    case Some(c) =>{
+                                                     var r:=runDTM'(delta,c,inputS,AddTapeS);
+                                                      return r;
+                                                    }
+                                                    case None => return None;
+                                            }
+}
 
 
 ghost predicate isThereAClosedTransitionInNSteps(delta:Transitions, conf1:Configuration, conf2:Configuration, n:nat)

@@ -1,72 +1,123 @@
 include "objects.dfy"
 include "turing_machine.dfy"
 include "certificate.dfy"
-predicate isInputCKT (input:seq<string>)
+const CKTSymbolStrings:=["AND","OR","NOT","VARIABLE","1","POSITION"]
+const CKTInputSymbols:={NonBlankSymbol("AND"),NonBlankSymbol("OR"),NonBlankSymbol("NOT"),NonBlankSymbol("VARIABLE"),NonBlankSymbol("1"),NonBlankSymbol("POSITION"),NonBlankSymbol("TRUE"),NonBlankSymbol("FALSE"),NonBlankSymbol("CERT")}
+const CKTAddTapeSymbols:={Blank,NonBlankSymbol("Empty")}
+function getPosition(input:seq<string>,nr:nat) : nat 
+    requires nr<=|input|
+    decreases |input|-nr
 {
-    forall pos:nat::pos<|input| ==> isInputCKT'(input,pos)
-}
-predicate isStringAGate(str:string)
-{
-    str=="AND" || str=="OR" || str=="NOT"
+    if nr==|input| || input[nr]!="1" then
+        0
+    else 
+        1+getPosition(input,nr+1)
 }
 predicate isInputGoodForCKT(input:seq<string>)
 {
-    forall pos:nat::pos<|input| ==> isStringGoodForCKT(input[pos],pos)
+    forall pos:nat::pos<|input| ==> input[pos] in CKTSymbolStrings
 }
-predicate isStringGoodForCKT(str:string,pos:nat)
+predicate isInputCKT (input:seq<string>)
+    requires isInputGoodForCKT(input)
 {
-    if !isStringAValidNumber(str) then (str in ["AND","OR","NOT","VARIABLE"])
-    else
-        stringToNat(str)<pos
+    forall pos:nat::pos<|input| ==> isInputCKT'(input,pos)
 }
-predicate isAGoodVariableInput(x:string)
-{
-    !(x in ReservedWords) && !isStringAValidNumber(x)
-}
-predicate isStringAValidPos(input:seq<string>, pos:nat)
+predicate theLastTwoGatesArePOS (input:seq<string>, pos:nat)
     requires pos<|input|
-    requires isStringAValidNumber(input[pos])
 {
-    0<=stringToNat(input[pos])<pos && !isStringAValidNumber(input[stringToNat(input[pos])])
+    if input[pos]=="1"
+    then
+        match getPOZ(input,pos)
+            case Some(nr) => getPOZ(input,nr)!=None
+            case None => false
+    else
+        false
+}
+
+predicate theLastGateIsPOS(input:seq<string>,pos:nat)
+    requires pos<|input|
+{
+    if input[pos]=="1"
+    then 
+        getPOZ(input,pos)!=None
+    else 
+        false
+}
+function getCanonicalPOS(input:seq<string>,pos:nat) : nat
+    requires pos<|input|
+    requires input[pos]!="1"
+{
+    getCanonicalPOS'(input,0,pos)
+}
+function getCanonicalPOS'(input:seq<string>,initPos:nat,pos:nat) :nat
+    requires pos<|input|
+    requires initPos<=pos
+    requires input[pos]!="1"
+    decreases pos-initPos
+{
+    if initPos==pos then 
+        0
+    else 
+        if (input[initPos]!="1" && input[initPos]!="POSITION") then 
+            1+getCanonicalPOS'(input,initPos+1,pos)
+        else 
+            getCanonicalPOS'(input,initPos+1,pos)
+
+}
+function getPOZ(input:seq<string>,pos:int) : Option<nat>
+    requires -1<=pos<|input|
+    ensures match getPOZ(input,pos)
+                case Some(nr) => nr<=pos
+                case None => true
+    decreases pos
+{
+    if pos==-1 || (input[pos]!="1" && input[pos]!="POSITION") then
+        None
+    else
+        if input[pos]=="POSITION" then
+            Some(pos) 
+        else
+            getPOZ(input,pos-1)
+}
+function getCanonicalElement(input:seq<string>,pos:nat):Option<string>    
+    ensures  match getCanonicalElement(input,pos)
+                    case Some(str) => str!="1" && str!="POSITION"
+                    case None => true 
+{
+    getCanonicalElement'(input,0,0,pos)
+}
+function getCanonicalElement'(input:seq<string>,initPos:nat,gateCnt:nat,canonPos:nat):Option<string>
+    requires initPos<=|input|
+    decreases |input|-initPos
+    ensures  match getCanonicalElement'(input,initPos,gateCnt,canonPos)
+                    case Some(str) => str!="1" && str!="POSITION"
+                    case None => true 
+{
+    if initPos==|input| then
+        None
+    else 
+        if input[initPos]=="1"  || input[initPos]=="POSITION" then
+            getCanonicalElement'(input,initPos+1,gateCnt,canonPos)
+        else
+            if gateCnt==canonPos then 
+                Some(input[initPos])
+            else 
+                getCanonicalElement'(input,initPos+1,gateCnt+1,canonPos)
+
 }
 predicate isInputCKT' (input:seq<string>, pos:nat) // nu mai ai nume custom pentru variabile
     requires pos<|input|
+    requires isInputGoodForCKT(input)
 {
     match input[pos]
-        case "AND" => 2<pos<|input| && isStringAValidNumber(input[pos-1]) && isStringAValidNumber(input[pos-2]) 
-        case "OR" => 2<pos<|input| && isStringAValidNumber(input[pos-1]) && isStringAValidNumber(input[pos-2])
-        case "NOT" => 1<pos<|input|&& isStringAValidNumber(input[pos-1]) && isStringAValidPos(input, pos-1) 
+        case "AND" => 2<pos<|input| && theLastTwoGatesArePOS (input, pos-1)
+        case "OR" => 2<pos<|input| && theLastTwoGatesArePOS (input, pos-1)
+        case "NOT" => 1<pos<|input| && theLastGateIsPOS (input, pos-1)
         case "VARIABLE" => true
-        case x => isStringAValidNumber(x) && isStringAValidPos(input,pos)
-}
-lemma aCKTInputIsGood (input:seq<string>)
-    requires isInputCKT(input)
-    ensures isInputGoodForCKT(input)
-{
-     for pos:=0 to |input|
-        invariant 0 <= pos <= |input|
-        invariant forall k :: 0 <= k < pos ==> isStringGoodForCKT(input[k],k)
-    {
-        if pos<|input| 
-        {
-            assert isInputCKT'(input,pos);
-            if isStringAValidNumber(input[pos])
-            {
-
-            }
-        }
-    }    
-    assert forall pos:nat::pos<|input| ==> isStringGoodForCKT(input[pos],pos);
-}
- lemma ValidInputExtension(input: seq<string>, ext: seq<string>)
-    requires isInputCKT(input)
-    requires forall k :: |input| <= k <|input|+ |ext| ==> isInputCKT'(input + ext, k)
-    ensures isInputCKT(input + ext)
-{
-    var combined := input+ ext;
-    assert forall i :: 0 <= i < |input| ==> combined[i] == input[i];
-    assert forall i :: 0 <= i < |input| ==> isInputCKT'(input, i);
-    assert forall i :: 0 <= i < |input| && isInputCKT'(input,i)==> isInputCKT'(combined, i);
+        case "POSITION" => getPosition(input,pos)<getCanonicalPOS(input,pos) && (match getCanonicalElement(input,getCanonicalPOS(input,pos))
+                                                                                    case Some(str) => str!="POSITION"
+                                                                                    case None => false )
+        case "1" => getPOZ(input,pos)!=None
 }
 function nthVariableInput (input:seq<string>, pos:nat) : nat
     requires pos<|input|
@@ -106,7 +157,6 @@ lemma nthVariableInputIsUnique (input:seq<string>, pos1:nat,pos2:nat)
     }
     assert nthVariableInput'(input,0,pos2)>nthVariableInput'(input,0,pos1);
 }
-
 predicate isCertificateValidForInput (input:seq<string>,k:seq<string>)
     requires isCertificateCorrectForm(k)
 {
@@ -114,39 +164,24 @@ predicate isCertificateValidForInput (input:seq<string>,k:seq<string>)
 }
 ghost predicate isLanguageCKT(l:Language)
 {
-    forall input:seq<string> :: (input in l) <==> isInputCKT(input) 
+    forall input:seq<string> :: (input in l) <==> isInputGoodForCKT(input) && isInputCKT(input) 
 }
-ghost predicate isInputSymbolsValidForLanguage(l:Language,inputS:InputSymbols)
-{
-    forall input:seq<string>::  input in l <==> 
-                                exists c:seq<string>,k:certificate :: isCertificateCorrectForm(k) && isInputValid(input+k,inputS)
-}
-ghost predicate inputSymbolsForCKT (inputS:InputSymbols,l:Language)
+lemma CKTInputSymbolsIsgoodForLanguage(l:Language)
     requires isLanguageCKT(l)
+    ensures forall input:seq<string> :: (input in l) ==> 
+    isInputValid(input,CKTInputSymbols)
 {
-    isInputSymbolsValidForLanguage(l,inputS)
+    var input:| input in l;
+    assert isInputGoodForCKT(input);
+    assert forall pos:nat::pos<|input| ==> input[pos] in ["AND","OR","NOT","VARIABLE","1","POSITION"];
+    assert forall pos:nat::pos<|input| ==> (NonBlankSymbol(input[pos]) in CKTInputSymbols);
+    assert forall str:string :: (str in input) ==> (exists pos:nat::pos<|input| && input[pos]==str);
+    assert forall str:string :: (str in input) ==> (exists pos:nat::pos<|input| && input[pos]==str && (NonBlankSymbol(input[pos]) in CKTInputSymbols));
+    assert forall str:string :: (str in input) ==> (NonBlankSymbol(str) in CKTInputSymbols);
 }
-ghost predicate AdditionalTapeSymbolsForCKT(inputS:InputSymbols,l:Language,addTapeS:AdditionalTapeSymbols)
-    requires isLanguageCKT(l)
-    requires isInputSymbolsValidForLanguage(l,inputS)
+lemma CKTInputSymbolsIsgoodForCertificate(k:certificate)
+    requires isCertificateCorrectForm(k)
+    ensures isInputValid(k,CKTInputSymbols)
 {
-    isTapeSymbolsValid(inputS,addTapeS)
+    assert forall str:string::(str in k) ==> str in ["TRUE","FALSE"];
 }
-
-predicate isCKTInputString(s: string)
-{
-  isStringAValidNumber(s)
-  || s == "AND"
-  || s == "OR"
-  || s == "NOT"
-  || s == "VARIABLE"
-  || s == "TRUE"
-  || s == "FALSE"
-}
-predicate isCKTInputSymbol(sym: Symbol)
-{
-  match sym
-    case NonBlankSymbol(s) => isCKTInputString(s)
-    case Blank => false
-}
-
