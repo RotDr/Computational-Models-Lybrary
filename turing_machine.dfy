@@ -43,7 +43,7 @@ datatype Direction = Left | Right
  
 datatype Action = Action(state : State, symbol : Symbol, direction : Direction)
  
-type Transitions = map<Key,seq<Action>> // posibil de schimbat de la seq la set
+type Transitions = map<Key,seq<Action>> 
 ghost predicate isTransitionsValid(delta:Transitions,inps:InputSymbols,adts:AdditionalTapeSymbols)
   requires isTapeSymbolsValid(inps,adts)
 {
@@ -263,45 +263,47 @@ ghost predicate isReductionBetweenLanguages(A:Language,B:Language,r:reduction)
 }
 
 
-// method Main()
-//   decreases *
-// {
-//   var q0:=NormalState("q0");
-//   var q1:=NormalState("q1");
-//   var qAcc:=FinalState("qAcc",Accept);
-//   var qRej:=FinalState("qRej",Reject);
-//   var one:=NonBlankSymbol("1");
-//   var delta:= map[
-//     Key(q0,one) := Action(q1,Blank,Right),
-//     Key(q1,one) := Action(q0,Blank,Right),
-//     Key(q0,Blank) := Action(qAcc,Blank,Right),
-//     Key(q1,Blank) := Action(qRej,Blank,Right)
-//   ];
-//   assert one==NonBlankSymbol("1");
-//   var input:=["1","1","1","1","1"];
-//   print input;
-//   print "\n";
-//   var config:=runTM(delta,input,q0);
-//   match config
-//     case Some (c)=> {
-//       match c
-//         case Configuration(q,tape,head) => 
-//         {
-//           print q;
-//           print "\n";
-//           print head;
-//           print "\n";
-//           print tape(2);
-//           print tape(head);
-//         }
-//     }
-//     case None =>
-//     {
-//       print "failed";
-//     }
-//   // runTM
-//   // print tape
-// }
+method Main()
+  decreases *
+{
+  var q0:=NormalState("q0");
+  var q1:=NormalState("q1");
+  var qAcc:=FinalState("qAcc",Accept);
+  var qRej:=FinalState("qRej",Reject);
+  var one:=NonBlankSymbol("1");
+  var delta:= map[
+    Key(q0,one) :=[Action(q1,Blank,Right)],
+    Key(q1,one) := [Action(q0,Blank,Right)],
+    Key(q0,Blank) := [Action(qAcc,Blank,Right)],
+    Key(q1,Blank) := [Action(qRej,Blank,Right)]
+  ];
+  assert one==NonBlankSymbol("1");
+  var input:=["1","1","1","1","1"];
+  var inputS:={one};
+  var addTapeS:={Blank};
+  print input;
+  print "\n";
+  var config:=runDTM(delta,input,q0,inputS,addTapeS);
+  match config
+    case Some (c)=> {
+      match c
+        case Configuration(q,tape,head) => 
+        {
+          print q;
+          print "\n";
+          print head;
+          print "\n";
+          print tape(2);
+          print tape(head);
+        }
+    }
+    case None =>
+    {
+      print "failed";
+    }
+  // runTM
+  // print tape
+}
 // defineste un limbaj si limbaj decidabil in dafny
 // inchidere tranzition
 // reduceable
