@@ -1,35 +1,25 @@
 include "objects.dfy"
 include "Certificate.dfy"
-predicate isCircuitCellAPoz (e:circuitCell)
-{
-     match e
-        case POZ(nr) => true
-        case _ => false 
-}
+
 predicate isCircuitCellAVariable(e:circuitCell)
 {
     match e 
         case VARIABLE(_) => true
         case _ => false
 }
-predicate isAGoodPoz (e:circuitCell,poz:nat)
-    requires isCircuitCellAPoz(e)
-{
-    match e
-        case POZ(nr) => (
-            0<=nr<poz)
-}
+
 predicate isCircuitGood(c:circuit)
 {
-    forall poz:nat::poz<|c| ==> isCircuitGood'(c[poz],poz)
+    forall pos:nat::pos<|c| ==> isCircuitGood'(c[pos],pos)
 }
-predicate isCircuitGood'(c:circuitCell,poz:nat)
+predicate isCircuitGood'(c:circuitCell,pos:nat)
 
 {
-    if isCircuitCellAPoz(c) then
-        isAGoodPoz(c,poz)
-    else
-        true 
+    match c 
+        case AND(p1,p2) => p1<pos && p2<pos
+        case OR(p1,p2) => p1<pos && p2<pos
+        case NOT(p) => p<pos
+        case VARIABLE(_) => true 
 }
 predicate isCircuitValid (c:circuit)
 {
@@ -39,48 +29,22 @@ predicate isCircuitValid'(c:circuit, pos:nat)
     requires pos<|c|
 {
     match c[pos]
-            case AND => 2<pos<|c| && isCircuitCellAPoz(c[pos-1]) && isCircuitCellAPoz(c[pos-2])
-            case OR => 2<pos<|c|  && isCircuitCellAPoz(c[pos-1]) && isCircuitCellAPoz(c[pos-2])
-            case NOT => 1<pos<|c| && isCircuitCellAPoz(c[pos-1]) 
-            case VARIABLE (x) => true   //( forall poz:nat:: poz<|c| && isCircuitCellAVariable(c[poz]) && poz!=pos 
-                                                //==> match c[poz] 
-                                                //    case VARIABLE(y) => x!=y)
-            case POZ(nr) => isAGoodPoz(c[pos],pos) && !isCircuitCellAPoz(c[nr])
+            case AND(p1,p2) => 2<pos<|c| &&  p1<pos && p2<pos
+            case OR(p1,p2) => 2<pos<|c|  && p1<pos && p2<pos
+            case NOT(p) => 1<pos<|c|  && p<pos
+            case VARIABLE (x) => forall poz:nat:: poz<pos ==> isCircuitCellAVariable(c[poz])
 }
 lemma aValidCircuitIsGood(c:circuit)
  requires isCircuitValid(c)
-    ensures forall pos:nat::pos<|c| && isCircuitCellAPoz(c[pos]) ==> isAGoodPoz(c[pos],pos)
+    ensures isCircuitGood(c)
 {
-    forall pos:nat | pos<|c|
-        ensures pos<|c| && isCircuitCellAPoz(c[pos]) ==> isAGoodPoz(c[pos],pos)
-    {
-        aValidCircuitIsGood'(c,pos);
-    }
-}
-lemma aValidCircuitIsGood' (c:circuit,pos:nat)
-    requires isCircuitValid(c)
-    ensures pos<|c| && isCircuitCellAPoz(c[pos]) ==> isAGoodPoz(c[pos],pos)
-{
-    if pos>=|c|
-    {
-
-    }
-    else
+    for pos:=0 to |c|
+        invariant forall poz:nat:: poz<pos ==> isCircuitGood'(c[poz],poz)
     {
         assert isCircuitValid'(c,pos);
-        if isCircuitCellAPoz(c[pos])
-        {
-            assert isAGoodPoz(c[pos],pos);
-        }
     }
 }
-predicate isThatPOZValid(c:circuit,pos:nat)
-    requires pos<|c|
-{
-    match c[pos]
-         case POZ(nr) =>  pos>0 && 0<nr<pos-1 && pos-nr-1>=0 && !isCircuitCellAPoz(c[nr])
-         case _=>true
-}
+
 predicate areTwoCircuitsTheSame (c1:circuit,c2:circuit)
 {
     |c1|==|c2| && forall pos:nat::pos<|c1| ==> c1[pos]==c2[pos]
@@ -172,19 +136,16 @@ predicate solveCircuit'(c:circuit,k:certificate,pos:nat)
 {
 
     match c[pos]
-        case AND =>  
+        case AND(pos1,pos2) =>  
             assert  isCircuitValid'(c, pos);
-            solveCircuit'(c,k,pos-1) && solveCircuit'(c,k,pos-2)
-        case OR  =>
+            solveCircuit'(c,k,pos1) && solveCircuit'(c,k,pos2)
+        case OR(pos1,pos2)  =>
             assert  isCircuitValid'(c, pos);
-            solveCircuit'(c,k,pos-1) || solveCircuit'(c,k,pos-2)
-        case NOT  =>
-            assert  isCircuitValid'(c, pos);        
-        !solveCircuit'(c,k,pos-1)
+            solveCircuit'(c,k,pos1) || solveCircuit'(c,k,pos2)
+        case NOT(pos1)  =>
+            assert  isCircuitValid'(c, pos);
+            solveCircuit'(c,k,pos1)        
         case VARIABLE (x) => getValueFromCertificate(c,pos,k)
-        case POZ(nr)=>
-            assert  isCircuitValid'(c, pos);
-            solveCircuit'(c,k,nr)
 }
 ghost predicate checkSatisfaction(c:circuit)
     requires isCircuitValid(c)

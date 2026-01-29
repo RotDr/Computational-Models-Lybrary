@@ -1,4 +1,4 @@
-datatype circuitCell = AND | OR | NOT | VARIABLE(x:string) | POZ(i:nat)
+datatype circuitCell = AND(pos1:nat,pos2:nat) | OR(pos1:nat,pos2:nat) | NOT(pos:nat) | VARIABLE(x:string) 
 type circuit=seq<circuitCell>
 type stringNat = s: string |
     |s| > 0 && (|s| > 1 ==> s[0] != '0') &&

@@ -1,24 +1,37 @@
-// include "Certificate.dfy"
-// include "Circuit.dfy"
-// include "CKTInput.dfy"
-// function circuitToInput (c:circuit) : seq<string>
-//     requires isCircuitGood(c)
-// {
-//     circuitToInput'(c,0)
-// }
-// function circuitCellToString (e:circuitCell) : string
-// {
-//     match e 
-//         case AND => "AND"
-//         case OR => "OR"
-//         case NOT => "NOT"
-//         case VARIABLE(x) => "VARIABLE"
-//         case POZ(nr) =>
-//             natToString(nr)
-// }
+include "Certificate.dfy"
+include "Circuit.dfy"
+include "CKTInput.dfy"
+function circuitToInput (c:circuit) : seq<string>
+    requires isCircuitGood(c)
+{
+    circuitToInput'(c,0)
+}
+function numberToUnary (nr:nat): seq<string>
+    decreases nr
+    ensures nr>0 ==> |numberToUnary(nr)| == 1+|numberToUnary(nr-1)|
+    ensures |numberToUnary(0)|==1
+{
+    if nr==0 then 
+        ["POSITION"]
+    else
+        ["1"]+numberToUnary(nr-1)
+}
+function unaryToNumber (s:seq<string>) : nat
+    requires |s|>=1
+{
+    |s|-1
+}
+function circuitCellToSeqString (e:circuitCell) : seq<string>
+{
+    match e 
+        case AND(pos1,pos2) => numberToUnary(pos1)+numberToUnary(pos2)+["AND"]
+        case OR(pos1,pos2) => numberToUnary(pos1)+numberToUnary(pos2)+["OR"]
+        case NOT(pos1) => numberToUnary(pos1)+["NOT"]
+        case VARIABLE(x) => ["VARIABLE"]
+}
 // lemma stringToCircuitCellToStringIsTheSame (s:string,pos:nat)
 //     requires !(s in ["AND","OR","NOT","VARIABLE"]) ==> isStringAValidNumber(s)
-//     ensures circuitCellToString(stringToCircuitCell(s,pos))==s
+//     ensures circuitSeqCellToString(stringToCircuitCell(s,pos))==s
 // {
 //     var c:=stringToCircuitCell(s,pos);
 //     if isStringAValidNumber(s)
@@ -31,18 +44,16 @@
 //         assert s2==s;
 //     }
 // }
-// function circuitToInput' (c:circuit,pos:nat) :seq<string>
-//     requires pos<=|c|
-//     requires isCircuitGood(c)
-//     ensures |circuitToInput'(c,|c|)|==0
-//     ensures pos<|c| ==> |circuitToInput'(c,pos)|==|circuitToInput'(c,pos+1)|+1
-//     decreases |c|-pos
-// {
-//     if pos==|c| then 
-//     []
-//     else 
-//         [circuitCellToString(c[pos])]+circuitToInput'(c,pos+1)
-// }
+function circuitToInput' (c:circuit,pos:nat) :seq<string>
+    requires pos<=|c|
+    requires isCircuitGood(c)
+    decreases |c|-pos
+{
+    if pos==|c| then 
+    []
+    else 
+        circuitCellToSeqString(c[pos])+circuitToInput'(c,pos+1)
+}
 
 // lemma sameCircuitToInputLength(c: circuit, poz: nat)
 //     requires isCircuitGood(c)

@@ -29,12 +29,16 @@ const GFITransitions:= map[
     Key(NormalState("gfi"),NonBlankSymbol("TRUE")):= Action(NormalState("gfT"),Blank,Left),
     Key(NormalState("gfi"),NonBlankSymbol("FALSE")):= Action(NormalState("gfF"),Blank,Left)
 ]
-const GFBOOLtransitions1:= map sym,s | sym in CircuitSymbols && s in {NormalState("gfT"),NormalState("gfF")} ::
+const GFBOOLtransitions1:= map sym,s | sym in CircuitSymbols-{NonBlankSymbol("VARIABLE")} 
+&& s in {NormalState("gfT"),NormalState("gfF"),NormalState("gi")} ::
     Key(s,sym):= Action(s,sym,Left)
 const GFBOOLtransitions2:= map 
     [
-        Key(NormalState("gfF"),Blank):= Action(NormalState("gff"),Blank,Right),
-        Key(NormalState("gfT"),Blank):= Action(NormalState("gft"),Blank,Right)
+        Key(NormalState("gfF"),NonBlankSymbol("VARIABLE")):= Action(NormalState("gi"),NonBlankSymbol("FALSE"),Right),
+        Key(NormalState("gfT"),NonBlankSymbol("VARIABLE")):= Action(NormalState("gi"),NonBlankSymbol("TRUE"),Right),
+        Key(NormalState("gfF"),Blank):= Action(NormalState("g"),Blank,Right),
+        Key(NormalState("gfT"),Blank):= Action(NormalState("g"),Blank,Right),
+        Key(NormalState("gi"),Blank):= Action(NormalState("g"),Blank,Right)
     ]
 const GFBOOLtransitions3:=map sym,s |  sym in NonVariableSymbols && s in {NormalState("gff"),NormalState("gft")} ::
     Key(s,sym):= Action(FinalState("WTF",Reject),NonBlankSymbol("FALSE"),Right)
