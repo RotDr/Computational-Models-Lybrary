@@ -134,7 +134,7 @@ ghost predicate isThereAClosedTransitionInPolynomialTime(delta:Transitions, conf
   exists n:nat:: isThereAClosedTransitionInNSteps(delta, conf1, conf2, n) && isPolynomial(n,m)  // de facut DTM equivalent 
 }
 type Language=set<seq<string>>
-ghost predicate isConfAccepted(conf:Configuration)
+predicate isConfAccepted(conf:Configuration)
 {
     match conf 
     case Configuration(q,_,_) => match q
@@ -143,13 +143,13 @@ ghost predicate isConfAccepted(conf:Configuration)
                                                           case Some(con) => con==Accept
                                   
 }
-ghost predicate isConfRejected(conf:Configuration)
+predicate isConfRejected(conf:Configuration)
 {
     match conf 
     case Configuration(q,_,_) => match q
                                     case State(_,c) => match c 
                                                           case None => false
-                                                          case Some(con) => con==Accept
+                                                          case Some(con) => con==Reject
 }
 ghost predicate canAStateReachAFinalState(delta : Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,conf1:Configuration)
   requires isTapeSymbolsValid(inputS,addTapeS)

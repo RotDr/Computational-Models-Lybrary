@@ -428,19 +428,51 @@ function finalTapeForExample() : iseq<Symbol>
     i =>
         Blank
 }
+lemma TraceExecution(
+  delta: DeterministicTransitions,
+  inputS: InputSymbols,
+  addTapeS: AdditionalTapeSymbols,
+  current_conf: Configuration,
+  n: nat
+) returns (next_conf: Configuration)
+  requires isTapeSymbolsValid(inputS, addTapeS)
+  requires isDeterministicTransitionsValid(delta, inputS, addTapeS)
+  requires {Key(State("q0", None), NonBlankSymbol("1")), Key(State("q1", None), NonBlankSymbol("1"))} <= delta.Keys
+  requires delta[Key(State("q0", None), NonBlankSymbol("1"))] == Action(State("q1", None), Blank, Right)
+  requires delta[Key(State("q1", None), NonBlankSymbol("1"))] == Action(State("q0", None), Blank, Right)
+  requires current_conf.s == State("q0", None) || current_conf.s == State("q1", None)
+  requires forall i :: current_conf.head <= i < current_conf.head + n ==> current_conf.tape(i) == NonBlankSymbol("1")
+  requires current_conf.tape(current_conf.head + n) == Blank
+  decreases n
+  ensures next_conf.head == current_conf.head + n
+  ensures next_conf.tape(next_conf.head) == Blank
+  ensures next_conf.s == State("q0", None) || next_conf.s == State("q1", None)
+  ensures isThereAClosedTransitionInNStepsForDTM(delta, inputS, addTapeS, current_conf, next_conf, n)
+{
+  if n == 0 {
+    next_conf := current_conf;
+  } else {
+    match applyTransitionDTM(current_conf, delta)
+      case Some(step_conf) => {
+        next_conf := TraceExecution(delta, inputS, addTapeS, step_conf, n - 1);
+      }
+      case None => { }
+  }
+}
+
 lemma CorrectInputHalts(
   delta: DeterministicTransitions, 
   inputS: InputSymbols, 
   addTapeS: AdditionalTapeSymbols, 
   q0: State, 
   q1: State, 
-  qRej: State,
+  qRej: State, 
   qAcc: State,
   one: Symbol, 
   input: seq<string>
 )
   requires isInputCorrect(input)
-  requires |input|>=1
+  requires |input| >= 1
   requires one == NonBlankSymbol("1")
   requires inputS == {one}
   requires addTapeS == {Blank}
@@ -451,71 +483,92 @@ lemma CorrectInputHalts(
   requires q1 == State("q1", None)
   requires qRej == State("qRej", Some(Reject))
   requires qAcc == State("qAcc", Some(Accept))
-  requires {Key(q0, one),Key(q1, one),Key(q1, Blank),Key(q0,Blank)}<=delta.Keys
+  requires {Key(q0, one), Key(q1, one), Key(q1, Blank), Key(q0, Blank)} <= delta.Keys
   requires delta[Key(q0, one)] == Action(q1, Blank, Right)
   requires delta[Key(q1, one)] == Action(q0, Blank, Right)
   requires delta[Key(q1, Blank)] == Action(qRej, Blank, Right)
-  requires delta[Key(q0,Blank)] == Action(qAcc,Blank, Right)
-  
-
+  requires delta[Key(q0, Blank)] == Action(qAcc, Blank, Right)
   ensures haltsInDTM(delta, q0, inputS, addTapeS, input)
-
 {
-  var init_config:=initialConfiguration(input,q0,inputS);
-  var q_final:=finalStateForInput(input);
-  var head:=|input|+1;
-  var final_tape:=finalTapeForExample();
-  var final_config:=Configuration(q_final,final_tape,head);
-  assert q_final==qAcc || q_final==qRej;
-  assert isThereAClosedTransitionInNStepsForDTM(delta,inputS,addTapeS, init_config, final_config, |input|+1);
-  assert isConfAccepted(final_config) ||isConfRejected(final_config);
-    
+  var init_config := initialConfiguration(input, q0, inputS);
+  var steps := |input|;
+
+  var mid_config := TraceExecution(delta, inputS, addTapeS, init_config, steps);
+  
+  match applyTransitionDTM(mid_config, delta)
+    case Some(halt_config) => {
+      LinkTransitions(delta, inputS, addTapeS, init_config, mid_config, halt_config, steps);
+
+      assert isThereAClosedTransitionInNStepsForDTM(delta, inputS, addTapeS, init_config, halt_config, steps + 1);
+      assert isThereAClosedTransitionDTM(delta,inputS,addTapeS,init_config,halt_config);
+      assert haltsInDTM(delta, q0, inputS, addTapeS, input);
+    }
+    case None => {}
 }
 
-// method Main()
-// {
-//   var q0:=State("q0",None);
-//   var q1:=State("q1",None);
-//   var qAcc:=State("qAcc",Some(Accept));
-//   var qRej:=State("qRej",Some(Reject));
-//   var one:=NonBlankSymbol("1");
-//   var delta:= map[
-//     Key(q0,one) :=[Action(q1,Blank,Right)],
-//     Key(q1,one) := [Action(q0,Blank,Right)],
-//     Key(q0,Blank) := [Action(qAcc,Blank,Right)],
-//     Key(q1,Blank) := [Action(qRej,Blank,Right)]
-//   ];
-//   assert one==NonBlankSymbol("1");
-//   var input:=["1","1","1","1","1"];
-//   var inputS:={one};
-//   var addTapeS:={Blank};
-//   print input;
-//   print "\n";
+lemma LinkTransitions(
+  delta: DeterministicTransitions, 
+  inputS: InputSymbols, 
+  addTapeS: AdditionalTapeSymbols, 
+  c1: Configuration, 
+  c2: Configuration, 
+  c3: Configuration, 
+  n: nat
+)
+  requires isTapeSymbolsValid(inputS, addTapeS)
+  requires isDeterministicTransitionsValid(delta, inputS, addTapeS)
+  requires isThereAClosedTransitionInNStepsForDTM(delta, inputS, addTapeS, c1, c2, n)
+  requires applyTransitionDTM(c2, delta) == Some(c3)
+  ensures isThereAClosedTransitionInNStepsForDTM(delta, inputS, addTapeS, c1, c3, n + 1)
+  decreases n
+{
+  if n == 0 {
+  } else {
+    var c_prime :| applyTransitionDTM(c1, delta) == Some(c_prime) && 
+                   isThereAClosedTransitionInNStepsForDTM(delta, inputS, addTapeS, c_prime, c2, n-1);
+    LinkTransitions(delta, inputS, addTapeS, c_prime, c2, c3, n - 1);
+  }
+}
+method Main()
+{
+  var q0:=State("q0",None);
+  var q1:=State("q1",None);
+  var qAcc:=State("qAcc",Some(Accept));
+  var qRej:=State("qRej",Some(Reject));
+  var one:=NonBlankSymbol("1");
+  var delta:= map[
+    Key(q0,one) :=[Action(q1,Blank,Right)],
+    Key(q1,one) := [Action(q0,Blank,Right)],
+    Key(q0,Blank) := [Action(qAcc,Blank,Right)],
+    Key(q1,Blank) := [Action(qRej,Blank,Right)]
+  ];
+  assert one==NonBlankSymbol("1");
+  var input:=["1","1","1","1","1"];
+  var inputS:={one};
+  var addTapeS:={Blank};
+  print input;
+  print "\n";
 
 
-//   assert isTapeSymbolsValid(inputS, addTapeS);
-//   assert isInputValid(input, inputS);
-//   assert isTransitionsValid(delta, inputS, addTapeS);
-//   assert isTransitionsDeterministic(delta, inputS, addTapeS);
+  assert isTapeSymbolsValid(inputS, addTapeS);
+  assert isInputValid(input, inputS);
+  assert isTransitionsValid(delta, inputS, addTapeS);
+  assert isTransitionsDeterministic(delta, inputS, addTapeS);
   
-//   var deltaDTM := fromNDTMtoDTM(delta, inputS, addTapeS);
+  var deltaDTM := fromNDTMtoDTM(delta, inputS, addTapeS);
 
   
 
 
-//   CorrectInputHalts(deltaDTM, inputS, addTapeS, q0, q1, qRej,qAcc,one,input);
+  CorrectInputHalts(deltaDTM, inputS, addTapeS, q0, q1, qRej,qAcc,one,input);
 
 
 
-//   assert haltsInDTM(deltaDTM, q0, inputS, addTapeS, input);
+  assert haltsInDTM(deltaDTM, q0, inputS, addTapeS, input);
 
-//   var finalConfig := beginDTM(deltaDTM, inputS, addTapeS, q0, input);
-//   match finalConfig
-//         case Configuration(s,_,_) =>
-//           match s
-//             case State(_,con) =>
-//                 match con 
-//                     case Accept 
+  var finalConfig := beginDTM(deltaDTM, inputS, addTapeS, q0, input);
+
+}
 
 
 // }
