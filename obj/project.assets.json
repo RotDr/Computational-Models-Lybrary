@@ -949,19 +949,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Under\\.nuget\\packages\\": {}
+    "/home/under/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Under\\LicentaNew\\turing_machine.csproj",
-      "projectName": "turing_machine",
-      "projectPath": "C:\\Users\\Under\\LicentaNew\\turing_machine.csproj",
-      "packagesPath": "C:\\Users\\Under\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Under\\LicentaNew\\obj\\",
+      "projectUniqueName": "/home/under/Licenta/Library/Circuit-SAT/Lambda.csproj",
+      "projectName": "Lambda",
+      "projectPath": "/home/under/Licenta/Library/Circuit-SAT/Lambda.csproj",
+      "packagesPath": "/home/under/.nuget/packages/",
+      "outputPath": "/home/under/Licenta/Library/Circuit-SAT/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\Under\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "/home/under/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
@@ -979,13 +979,7 @@
         "warnAsError": [
           "NU1605"
         ]
-      },
-      "restoreAuditProperties": {
-        "enableAudit": "true",
-        "auditLevel": "low",
-        "auditMode": "direct"
-      },
-      "SdkAnalysisLevel": "10.0.100"
+      }
     },
     "frameworks": {
       "net8.0": {
@@ -1016,7 +1010,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.101/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/8.0.126/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

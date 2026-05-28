@@ -1,6 +1,6 @@
 include "objects.dfy"
 include "turing_machine.dfy"
-include "certificate.dfy"
+include "Certificate.dfy"
 const CKTSymbolStrings:=["AND","OR","NOT","VARIABLE","1","POSITION"]
 const CKTInputSymbols:={NonBlankSymbol("AND"),NonBlankSymbol("OR"),NonBlankSymbol("NOT"),NonBlankSymbol("VARIABLE"),NonBlankSymbol("1"),NonBlankSymbol("POSITION"),NonBlankSymbol("TRUE"),NonBlankSymbol("FALSE"),NonBlankSymbol("CERT")}
 const CKTAddTapeSymbols:={Blank,NonBlankSymbol("Empty")}

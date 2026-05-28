@@ -1,3 +1,4 @@
+include "objects.dfy"
 datatype Symbol = NonBlankSymbol (s : string) | Blank 
 
 type InputSymbols = set<Symbol>
@@ -53,7 +54,6 @@ ghost predicate isTransitionsValid(delta:Transitions,inputS:InputSymbols,addTape
                                                                                                           match i 
                                                                                                             case Action(_,s1,_) => s1 in inputS+addTapeS))
 }
-datatype Option<T> = Some(t:T) |None
 predicate isPozInTransitions(config : Configuration, delta : Transitions, poz:int)
 {
   match config 
@@ -96,16 +96,6 @@ function initialConfiguration (input: seq<string>, q:State, inputS:InputSymbols)
 }
 
 
-// predicat daca exista transitions sa faca transitions 
-// lemma despre masina turing care sa arate ca pt numere impare exista un 
-// functie functie predicat ghost si demonstrarite
-// function simulateDTM (delta:Transitions,config:Configuration,inputS:InputSymbols,AddTapeS:AdditionalTapeSymbols): Option<Configuration>
-//     requires isTapeSymbolsValid(inputS,AddTapeS)
-//     requires isTransitionsValid(delta,inputS,AddTapeS)
-//     requires isTransitionsDeterministic(delta,inputS,AddTapeS)
-// {
-
-// }
 ghost predicate isThereAClosedTransitionInNSteps(delta:Transitions, conf1:Configuration, conf2:Configuration, n:nat) // functii de tranzitii
 // definitia asta era flawed initial incat nu ia in considerare cazul particular de 0
     decreases n

@@ -529,46 +529,46 @@ lemma LinkTransitions(
     LinkTransitions(delta, inputS, addTapeS, c_prime, c2, c3, n - 1);
   }
 }
-method Main()
-{
-  var q0:=State("q0",None);
-  var q1:=State("q1",None);
-  var qAcc:=State("qAcc",Some(Accept));
-  var qRej:=State("qRej",Some(Reject));
-  var one:=NonBlankSymbol("1");
-  var delta:= map[
-    Key(q0,one) :=[Action(q1,Blank,Right)],
-    Key(q1,one) := [Action(q0,Blank,Right)],
-    Key(q0,Blank) := [Action(qAcc,Blank,Right)],
-    Key(q1,Blank) := [Action(qRej,Blank,Right)]
-  ];
-  assert one==NonBlankSymbol("1");
-  var input:=["1","1","1","1","1"];
-  var inputS:={one};
-  var addTapeS:={Blank};
-  print input;
-  print "\n";
+// method Main()
+// {
+//   var q0:=State("q0",None);
+//   var q1:=State("q1",None);
+//   var qAcc:=State("qAcc",Some(Accept));
+//   var qRej:=State("qRej",Some(Reject));
+//   var one:=NonBlankSymbol("1");
+//   var delta:= map[
+//     Key(q0,one) :=[Action(q1,Blank,Right)],
+//     Key(q1,one) := [Action(q0,Blank,Right)],
+//     Key(q0,Blank) := [Action(qAcc,Blank,Right)],
+//     Key(q1,Blank) := [Action(qRej,Blank,Right)]
+//   ];
+//   assert one==NonBlankSymbol("1");
+//   var input:=["1","1","1","1","1"];
+//   var inputS:={one};
+//   var addTapeS:={Blank};
+//   print input;
+//   print "\n";
 
 
-  assert isTapeSymbolsValid(inputS, addTapeS);
-  assert isInputValid(input, inputS);
-  assert isTransitionsValid(delta, inputS, addTapeS);
-  assert isTransitionsDeterministic(delta, inputS, addTapeS);
+//   assert isTapeSymbolsValid(inputS, addTapeS);
+//   assert isInputValid(input, inputS);
+//   assert isTransitionsValid(delta, inputS, addTapeS);
+//   assert isTransitionsDeterministic(delta, inputS, addTapeS);
   
-  var deltaDTM := fromNDTMtoDTM(delta, inputS, addTapeS);
+//   var deltaDTM := fromNDTMtoDTM(delta, inputS, addTapeS);
 
   
 
 
-  CorrectInputHalts(deltaDTM, inputS, addTapeS, q0, q1, qRej,qAcc,one,input);
+//   CorrectInputHalts(deltaDTM, inputS, addTapeS, q0, q1, qRej,qAcc,one,input);
 
 
 
-  assert haltsInDTM(deltaDTM, q0, inputS, addTapeS, input);
+//   assert haltsInDTM(deltaDTM, q0, inputS, addTapeS, input);
 
-  var finalConfig := beginDTM(deltaDTM, inputS, addTapeS, q0, input);
+//   var finalConfig := beginDTM(deltaDTM, inputS, addTapeS, q0, input);
 
-}
+// }
 
 
 // }
