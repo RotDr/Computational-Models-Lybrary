@@ -36,14 +36,14 @@ lemma parallelReductionIsReflexive (t:LambdaTerm)
 
 }
 
-lemma NoFreeVariablesToReplace (M:LambdaTerm,x:Id,P:LambdaTerm)
-    requires !(x in free(M))
-    ensures caSubstitution(M,x,P)==M 
-{
-    var ids:=reunion(vars(M),vars(P));
-    reunionIncludesBothSets(vars(M),vars(P));
-    NoFreeVariablesToReplace'(M,x,P,ids);
-}
+// lemma NoFreeVariablesToReplace (M:LambdaTerm,x:Id,P:LambdaTerm)
+//     requires !(x in free(M))
+//     ensures alphaEquivalence(caSubstitution(M,x,P),M) 
+// {
+//     var ids:=reunion(vars(M),vars(P));
+//     reunionIncludesBothSets(vars(M),vars(P));
+//     NoFreeVariablesToReplace'(M,x,P,ids);
+// }
 lemma NotInReunionSoNotInBoth(s1:seq<Id>,s2:seq<Id>,x:Id)
     requires allUnique(s1) && allUnique(s2)
     requires !(x in reunion(s1,s2))
@@ -51,14 +51,50 @@ lemma NotInReunionSoNotInBoth(s1:seq<Id>,s2:seq<Id>,x:Id)
 {
 
 }
-lemma NoFreeVariablesToReplace' (M:LambdaTerm,x:Id,P:LambdaTerm,ids:seq<Id>)
+lemma NotInFreeAndNotFoundInLambdaSoNotInFree(t:LambdaTerm,x:Id,y:Id)
+    requires x!=y
+    requires !(x in free(Lambda(y,t)))
+    ensures !(x in free(t))
+{
+
+}
+
+lemma SubstitutionPreservesNonFree(t: LambdaTerm, y: Id, vari: LambdaTerm, x: Id)
+    requires x != y
+    requires match vari case Var(z) => x != z case _ => false
+    requires !(x in free(t))
+    ensures !(x in free(substitution(t, y, vari)))
+    decreases lHeight(t)
+{
+    match t {
+        case Var(z) => {
+        }
+        case Lambda(z, t') => {
+            if z == y {
+            } else {
+                if x != z {
+                    assert !(x in free(t'));
+                    SubstitutionPreservesNonFree(t', y, vari, x);
+                }
+            }
+        }
+        case Application(t1, t2) => {
+            assert !(x in free(t1)) && !(x in free(t2));
+            SubstitutionPreservesNonFree(t1, y, vari, x);
+            SubstitutionPreservesNonFree(t2, y, vari, x);
+        }
+    }
+}
+lemma NoFreeVariablesToReplace' (M:LambdaTerm,x:Id,P:LambdaTerm,M_sub:LambdaTerm,ids:seq<Id>)
     requires !(x in free(M))
     requires allUnique(ids)
     requires var s1:=vars(M);
          allUnique(s1) && includes(ids,s1)
     requires var s2:=vars(P);
          allUnique(s2)  && includes(ids,s2)
-    ensures caSubstitution(M,x,P)==M 
+    requires M_sub==caSubstitution'(M,x,P,ids)
+    ensures alphaEquivalence(M_sub,M) 
+    decreases M
 {
     match M 
         case Var(y) =>{
@@ -66,29 +102,101 @@ lemma NoFreeVariablesToReplace' (M:LambdaTerm,x:Id,P:LambdaTerm,ids:seq<Id>)
             assert !(x in free(M));
             assert x!=y;
 
-            assert caSubstitution'(M,x,P,ids)==M ;
+            assert M_sub==M ;
+            EqualTermsAreAlphaEquilvalent(M_sub,M);
         }
         case Application(M1,M2) => 
         {
-            assert free(M)==reunion(free(M1),free(M2));
-            NotInReunionSoNotInBoth(free(M1),free(M2),x);
-            NoFreeVariablesToReplace'(M1,x,P,ids);
-            assert caSubstitution'(M1,x,P,ids)==M1;
-            NoFreeVariablesToReplace'(M2,x,P,ids);
-            assert caSubstitution'(M2,x,P,ids)==M2;
-            assert caSubstitution'(M,x,P,ids)==Application(caSubstitution'(M1,x,P,ids),caSubstitution'(M2,x,P,ids));
+
+            ASubLambdaOfAUniqueLambdaIsUnique(M);
+            varsOfALambdaIncludesVarsofASubLambda(M);
+
+            var M1' := caSubstitution'(M1, x, P, ids);
+            var M2' := caSubstitution'(M2, x, P, ids);
+
+            assert M_sub == Application(M1', M2');
+
+            NoFreeVariablesToReplace'(M1, x, P, M1', ids);
+            NoFreeVariablesToReplace'(M2, x, P, M2', ids);
+
+
+            ApplicationEquivalence(M1', M1, M2', M2);
+
         }
         case Lambda(y,M') =>
-        {
-            if (y==x) 
+        { 
+            if (x==y)
             {
-                assert caSubstitution'(M,x,P,ids)==M;
+                assert M_sub==M;
+                EqualTermsAreAlphaEquilvalent(M_sub,M);
             }
             else 
             {
-                if ()
+                if !(y in free(P)) {
+
+                    ASubLambdaOfAUniqueLambdaIsUnique(M);
+                    varsOfALambdaIncludesVarsofASubLambda(M);
+                    NotInFreeAndNotFoundInLambdaSoNotInFree(M',x,y);
+
+                    var M'_sub:=caSubstitution'(M',x,P,ids);
+                    assert M_sub==Lambda(y,M'_sub);
+                    NoFreeVariablesToReplace'(M',x,P,M'_sub,ids);
+
+                    AlphaCongruenceLambda(y,M'_sub,M');
+                    assert alphaEquivalence(M_sub,M);
+                }  
+                else 
+                {
+                    assume alphaEquivalence(M_sub,M);
+
+                        var ids' := addAnUniqueId(ids);
+                    var y'   := ids'[0];
+                    var vari := Var(y');
+                    var M'_renamed := substitution(M', y, vari);
+                    var M'_sub     := caSubstitution'(M'_renamed, x, P, ids');
+
+                    assert M_sub == Lambda(y', M'_sub);
+
+                    // Step 1: y' is fresh w.r.t. M'
+                    // ids includes vars(M) which includes vars(M'), and y' = ids'[0] ∉ ids
+                    assert !(y' in ids);
+                    assert includes(ids, vars(M'));  // from varsOfALambdaIncludesVarsofASubLambda + ASubLambdaOfAUniqueLambdaIsUnique
+                    assert !(y' in vars(M'));
+
+                    // Step 2: substitution of y->y' in M' doesn't change height
+                    subsitutionOfVarDoesNotChangeHeightFORVARIABLES(M', y, vari);
+
+
+                    ASubLambdaOfAUniqueLambdaIsUnique(M);
+                    varsOfALambdaIncludesVarsofASubLambda(M);
+                    newIdsDueToSubstitution(M', y, vari, ids');
+
+
+                    NotInFreeAndNotFoundInLambdaSoNotInFree(M', x, y);
+                    assert !(x in free(M'));
+
+                    SubstitutionPreservesNonFree(M', y, vari, x);   
+                    assert !(x in free(M'_renamed));
+
+
+                    NoFreeVariablesToReplace'(M'_renamed, x, P, M'_sub, ids');
+                    assert alphaEquivalence(M'_sub, M'_renamed);
+
+                    
+                    AlphaCongruenceLambda(y', M'_sub, M'_renamed);
+                    assert alphaEquivalence(Lambda(y', M'_sub), Lambda(y', M'_renamed));
+
+                    SubstAlphaEquivalence(M', y, y');
+                   
+                    AlphaEquivSymmetric(Lambda(y, M'), Lambda(y', M'_renamed));
+                    assert alphaEquivalence(Lambda(y', M'_renamed), Lambda(y, M'));
+
+                    AlphaEquivTransitive(Lambda(y', M'_sub), Lambda(y', M'_renamed), Lambda(y, M'));
+                    assert alphaEquivalence(M_sub, M);
+                }
             }
-        }    
+
+        }
 }
 
 // lemma SubstitutionLemma (M:LambdaTerm,N:LambdaTerm,P:LambdaTerm,x:Id,y:Id)
