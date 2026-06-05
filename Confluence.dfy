@@ -36,14 +36,15 @@ lemma parallelReductionIsReflexive (t:LambdaTerm)
 
 }
 
-// lemma NoFreeVariablesToReplace (M:LambdaTerm,x:Id,P:LambdaTerm)
-//     requires !(x in free(M))
-//     ensures alphaEquivalence(caSubstitution(M,x,P),M) 
-// {
-//     var ids:=reunion(vars(M),vars(P));
-//     reunionIncludesBothSets(vars(M),vars(P));
-//     NoFreeVariablesToReplace'(M,x,P,ids);
-// }
+lemma NoFreeVariablesToReplace (M:LambdaTerm,x:Id,P:LambdaTerm)
+    requires !(x in free(M))
+    ensures alphaEquivalence(caSubstitution(M,x,P),M) 
+{
+    var ids:=reunion(vars(M),vars(P));
+    reunionIncludesBothSets(vars(M),vars(P));
+    var safe_ids:=addition(x,ids);
+    NoFreeVariablesToReplace'(M,x,P,caSubstitution(M,x,P),safe_ids);
+}
 lemma NotInReunionSoNotInBoth(s1:seq<Id>,s2:seq<Id>,x:Id)
     requires allUnique(s1) && allUnique(s2)
     requires !(x in reunion(s1,s2))
@@ -92,9 +93,10 @@ lemma NoFreeVariablesToReplace' (M:LambdaTerm,x:Id,P:LambdaTerm,M_sub:LambdaTerm
          allUnique(s1) && includes(ids,s1)
     requires var s2:=vars(P);
          allUnique(s2)  && includes(ids,s2)
+    requires x in ids
     requires M_sub==caSubstitution'(M,x,P,ids)
     ensures alphaEquivalence(M_sub,M) 
-    decreases M
+    decreases lHeight(M)
 {
     match M 
         case Var(y) =>{
@@ -147,111 +149,165 @@ lemma NoFreeVariablesToReplace' (M:LambdaTerm,x:Id,P:LambdaTerm,M_sub:LambdaTerm
                 }  
                 else 
                 {
-                    assume alphaEquivalence(M_sub,M);
-
-                        var ids' := addAnUniqueId(ids);
+                    var ids_with_x:=addition(x,ids);
+                    var ids' := addAnUniqueId(ids_with_x);
                     var y'   := ids'[0];
                     var vari := Var(y');
                     var M'_renamed := substitution(M', y, vari);
-                    var M'_sub     := caSubstitution'(M'_renamed, x, P, ids');
 
-                    assert M_sub == Lambda(y', M'_sub);
+                        assert !(y' in ids);
 
-                    // Step 1: y' is fresh w.r.t. M'
-                    // ids includes vars(M) which includes vars(M'), and y' = ids'[0] ∉ ids
-                    assert !(y' in ids);
-                    assert includes(ids, vars(M'));  // from varsOfALambdaIncludesVarsofASubLambda + ASubLambdaOfAUniqueLambdaIsUnique
-                    assert !(y' in vars(M'));
+                        subsitutionOfVarDoesNotChangeHeightFORVARIABLES(M', y, vari);
 
-                    // Step 2: substitution of y->y' in M' doesn't change height
-                    subsitutionOfVarDoesNotChangeHeightFORVARIABLES(M', y, vari);
+                        ASubLambdaOfAUniqueLambdaIsUnique(M);
+                        varsOfALambdaIncludesVarsofASubLambda(M);
+                        newIdsDueToSubstitution(M', y, vari, ids');
 
+                        assert !(y' in ids);
+                        assert y' != x;  
 
-                    ASubLambdaOfAUniqueLambdaIsUnique(M);
-                    varsOfALambdaIncludesVarsofASubLambda(M);
-                    newIdsDueToSubstitution(M', y, vari, ids');
+                        NotInFreeAndNotFoundInLambdaSoNotInFree(M', x, y);
+                        assert !(x in free(M'));
 
+                        SubstitutionPreservesNonFree(M', y, vari, x);
+                        assert !(x in free(M'_renamed));
 
-                    NotInFreeAndNotFoundInLambdaSoNotInFree(M', x, y);
-                    assert !(x in free(M'));
+                        assert !(y' in ids);
+                        assert includes(ids, vars(M'));
+                        assert !(y' in vars(M'));
 
-                    SubstitutionPreservesNonFree(M', y, vari, x);   
-                    assert !(x in free(M'_renamed));
+                        var M'_sub := caSubstitution'(M'_renamed, x, P, ids');
+                        assert M_sub == Lambda(y', M'_sub);
 
+                        NoFreeVariablesToReplace'(M'_renamed, x, P, M'_sub, ids');
 
-                    NoFreeVariablesToReplace'(M'_renamed, x, P, M'_sub, ids');
-                    assert alphaEquivalence(M'_sub, M'_renamed);
+                        AlphaCongruenceLambda(y', M'_sub, M'_renamed);
 
-                    
-                    AlphaCongruenceLambda(y', M'_sub, M'_renamed);
-                    assert alphaEquivalence(Lambda(y', M'_sub), Lambda(y', M'_renamed));
+                        SubstAlphaEquivalence(M', y, y');
 
-                    SubstAlphaEquivalence(M', y, y');
-                   
-                    AlphaEquivSymmetric(Lambda(y, M'), Lambda(y', M'_renamed));
-                    assert alphaEquivalence(Lambda(y', M'_renamed), Lambda(y, M'));
+                        assert alphaEquivalence(Lambda(y, M'), Lambda(y', M'_renamed));
 
-                    AlphaEquivTransitive(Lambda(y', M'_sub), Lambda(y', M'_renamed), Lambda(y, M'));
-                    assert alphaEquivalence(M_sub, M);
+                        AlphaEquivSymmetric(Lambda(y, M'), Lambda(y', M'_renamed));
+                        assert alphaEquivalence(Lambda(y', M'_renamed), Lambda(y, M'));
+
+                        AlphaEquivTransitive(Lambda(y', M'_sub), Lambda(y', M'_renamed), Lambda(y, M'));
+                        assert alphaEquivalence(M_sub, M);
                 }
             }
 
         }
 }
 
-// lemma SubstitutionLemma (M:LambdaTerm,N:LambdaTerm,P:LambdaTerm,x:Id,y:Id)
-//     requires x!=y
-//     requires !(x in free(P))
-//     ensures caSubstitution(caSubstitution(M,x,N),y,P)==caSubstitution(caSubstitution(M,y,P),x,caSubstitution(N,y,P))
+lemma SubstitutionLemma (M:LambdaTerm,N:LambdaTerm,P:LambdaTerm,x:Id,y:Id)
+    requires x!=y
+    requires !(x in free(P))
+    ensures alphaEquivalence(caSubstitution(caSubstitution(M,x,N),y,P),caSubstitution(caSubstitution(M,y,P),x,caSubstitution(N,y,P)))
+    decreases lHeight(M)
 
-// {
-//     match M
-//         case Application(M1,M2) =>
-//         {
+{
+    match M
+        case Application(M1,M2) =>
+        {
+            assume false;
+        }
+        case Lambda(z,M')=>
+        {
+            var safe_ids:=addition(x,addition(y,reunion(freeVec(P),vars(M'))));
+            var new_id:=addAnUniqueId(safe_ids)[0];
+            assert !(new_id in safe_ids);
+            assert new_id!=x && new_id!=y;
+            NotInReunionSoNotInBoth(freeVec(P),vars(M'),new_id);
+            assert !(new_id in free(P));
 
-//         }
-//         case Lambda(z,M')=>
-//         {
+
+            assert !(new_id in vars(M'));
+
+            var new_M:=Lambda(new_id,substitution(M',z,Var(new_id)));
+
+            SubstAlphaEquivalence(M',z,new_id);
+
+            assert alphaEquivalence(Lambda(z,M'),Lambda(new_id,substitution(M',z,Var(new_id))));
             
-//         }
-//         case Var(z) => {
-//             if (z==x) 
-//             {
-//                 var partial_result_left:=caSubstitution(M,x,N);
-//                 assert M==Var(x);
-//                 assert partial_result_left==N;
-//                 var left_result:=caSubstitution(N,y,P);
-//                 assert caSubstitution(caSubstitution(M,x,N),y,P)==left_result;
 
-//                 assert x!=y;
-//                 var partial_result_right:=caSubstitution(M,y,P);
-//                 assert partial_result_right==M;
-//                 var result_right:=caSubstitution(partial_result_right,x,caSubstitution(N,y,P));
-//                 assert M==Var(x);
-//                 assert result_right==caSubstitution(N,y,P);
+            assert Lambda(z,M')==M;
+            
+            assert alphaEquivalence(M,new_M);
 
-//                 assert caSubstitution(caSubstitution(M,y,P),x,caSubstitution(N,y,P))==result_right;
+            assert lHeight(M')<lHeight(M);
+            SubstitutionLemma(M',N,P,x,y);
+
+            var M'_left:=caSubstitution(caSubstitution(M',x,N),y,P);
+            var M'_right:=caSubstitution(caSubstitution(M',y,P),x,caSubstitution(N,y,P));
+
+            assert alphaEquivalence(M'_left,M'_right);
+
+            AlphaCongruenceLambda(new_id,M'_left,M'_right);
+
+            var left_result:=Lambda(new_id,M'_left);
+            var right_result:=Lambda(new_id,M'_right);
+
+            assert alphaEquivalence(left_result,right_result);
+
+    //        assert caSubstitution(caSubstitution(M,x,N),y,P)==Lambda(z,M'_left);
+
+            assume false;
+        }
+        case Var(z) => {
+            if (z == x) {
+                var partial_result_left := caSubstitution(M, x, N);
+                assert partial_result_left == N;
                 
-//                 assert left_result=result_right;
+                var left_result := caSubstitution(N, y, P);
+
+                var partial_result_right := caSubstitution(M, y, P);
+                assert partial_result_right == M;
                 
-//             }
-//             if (z==y)
-//             {
-//                 var partial_result_left:=caSubstitution(M,x,N);
-//                 assert M==Var(y);
-//                 assert x!=y;
-//                 assert partial_result_left==M;
-//                 var left_result:=caSubstitution(M,y,P);
-//                 assert caSubstitution(M,y,P)==P;
-//                 assert caSubstitution(caSubstitution(M,x,N),y,P)==left_result;
+                var N_sub := caSubstitution(N, y, P);
+                var right_result := caSubstitution(partial_result_right, x, N_sub);
+                assert right_result == N_sub; 
 
-//                 var partial_result_right:=caSubstitution(M,y,P);
-//                 assert partial_result_right==P; 
-//                 var right_result:=caSubstitution(P,caSubstitution(x,caSubstitution(N,y,P)));
+                assert left_result == right_result;
+                EqualTermsAreAlphaEquilvalent(left_result, right_result);
+            }
+            else if (z == y) {
+                var partial_result_left := caSubstitution(M, x, N);
+                assert partial_result_left == M; // Because x != y
+                
+                var left_result := caSubstitution(M, y, P);
+                assert left_result == P; 
 
-//             }
-//         } 
+                var partial_result_right := caSubstitution(M, y, P);
+                assert partial_result_right == P; 
+                
+                var N_sub := caSubstitution(N, y, P);
+                
+                var right_result := caSubstitution(P, x, N_sub); 
+
+                NoFreeVariablesToReplace(P, x, N_sub);
+
+                AlphaEquivSymmetric(right_result, P);
+                assert alphaEquivalence(left_result, right_result);
+
+            }
+            else {
+                var partial_result_left := caSubstitution(M, x, N);
+                assert partial_result_left == M;
+                
+                var left_result := caSubstitution(partial_result_left, y, P);
+                assert left_result == M;
+
+                var partial_result_right := caSubstitution(M, y, P);
+                assert partial_result_right == M;
+                
+                var N_sub := caSubstitution(N, y, P);
+                var right_result := caSubstitution(partial_result_right, x, N_sub);
+                assert right_result == M;
+
+                assert left_result == right_result;
+                EqualTermsAreAlphaEquilvalent(left_result, right_result);
+            }
+        } 
     
     
 
-// }
+}

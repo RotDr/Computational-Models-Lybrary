@@ -160,6 +160,15 @@ function free(t:LambdaTerm):set<Id>
                 case Application(t1,t2) => free(t1)+free(t2)
 }
 
+function freeVec(t:LambdaTerm):seq<Id>
+    ensures forall id:nat:: (id in free(t)) ==> id in freeVec(t)
+{
+    match t
+            case Var(x) => [x]
+            case Lambda(x,t) => remove(freeVec(t),x)
+            case Application(t1,t2) => reunion(freeVec(t1),freeVec(t2))
+}
+
 function vars(t:LambdaTerm):seq<Id>
     ensures allUnique(vars(t))
 {
@@ -213,15 +222,11 @@ function substitution(t:LambdaTerm,x:Id,t':LambdaTerm):LambdaTerm
 }
 
 function caSubstitution(t:LambdaTerm,x:Id,t':LambdaTerm):LambdaTerm
-    requires var s1:=vars(t);
-        allUnique(s1) 
-    requires var s2:=vars(t');
-        allUnique(s2)
-
 {
     var ids:=reunion(vars(t),vars(t'));
     reunionIncludesBothSets(vars(t),vars(t'));
-    caSubstitution'(t,x,t',reunion(vars(t),vars(t')))
+    var safe_ids := addition(x, ids);
+    caSubstitution'(t,x,t',safe_ids)
 }
 lemma subsitutionOfVarDoesNotChangeHeightFORVARIABLES(t1:LambdaTerm,x:Id,t2:LambdaTerm)
     requires match t2 
@@ -317,6 +322,7 @@ function caSubstitution'(t:LambdaTerm,x:Id,t':LambdaTerm,ids:seq<Id>):LambdaTerm
          allUnique(s1) && includes(ids,s1)
     requires var s2:=vars(t');
          allUnique(s2)  && includes(ids,s2)
+    requires x in ids
     decreases lHeight(t)
 {
     match t
@@ -336,11 +342,33 @@ function caSubstitution'(t:LambdaTerm,x:Id,t':LambdaTerm,ids:seq<Id>):LambdaTerm
         varsOfALambdaIncludesVarsofASubLambda (t);
         Application(caSubstitution'(t1,x,t',ids),caSubstitution'(t2,x,t',ids))
 }
+lemma CaSubstitutionRecursion (t:LambdaTerm,x:Id,t':LambdaTerm)
+    ensures match t 
+        case Lambda(y,t1) => (if y==x || !(y in free(t')) then caSubstitution(t,x,t')==Lambda(y,caSubstitution(t1,x,t')) else true)
+        case Var(y) => true 
+        case Application(t1,t2) => caSubstitution(t,x,t')==Application(caSubstitution(t1,x,t'),caSubstitution(t2,x,t'))
+{
+    
+}
 
+lemma CaSubstitutionRecursion' (t:LambdaTerm,x:Id,t':LambdaTerm,ids:seq<Id>)
+    requires allUnique(ids)
+    requires var s1:=vars(t);
+         allUnique(s1) && includes(ids,s1)
+    requires var s2:=vars(t');
+         allUnique(s2)  && includes(ids,s2)
+    requires x in ids
+    ensures match t 
+        case Lambda(y,t1) => (if y==x || !(y in free(t')) then caSubstitution(t,x,t')==Lambda(y,caSubstitution(t1,x,t')) else true)
+        case Var(y) => true 
+        case Application(t1,t2) => caSubstitution(t,x,t')==Application(caSubstitution(t1,x,t'),caSubstitution(t2,x,t'))
+{
+    
+}
 lemma CaSubstitution'OfVarDoesNotChangeHeight(t1:LambdaTerm, x:Id, t2:LambdaTerm, ids:seq<Id>)
     requires match t2 case Var(_) => true case _ => false
     requires allUnique(ids)
-    requires includes(ids,vars(t1)) && includes(ids,vars(t2))
+    requires includes(ids,vars(t1)) && includes(ids,vars(t2)) && x in ids
     ensures lHeight(caSubstitution'(t1, x, t2, ids)) == lHeight(t1)
     decreases lHeight(t1)
 {
@@ -373,7 +401,8 @@ lemma CaSubsitutionOfVarDoesNotChangeHeightFORVARIABLES(t1:LambdaTerm, x:Id, t2:
 {
     var ids := reunion(vars(t1), vars(t2));
     reunionIncludesBothSets(vars(t1),vars(t2));
-    CaSubstitution'OfVarDoesNotChangeHeight(t1, x, t2, ids);
+    var safe_ids:=addition(x,ids);
+    CaSubstitution'OfVarDoesNotChangeHeight(t1, x, t2, safe_ids);
 }
 
 lemma ASubLambdaOfAUniqueLambdaIsUnique(t:LambdaTerm)
@@ -782,3 +811,17 @@ lemma AlphaCongruenceLambda'(t1:LambdaTerm, t2:LambdaTerm,y:Id, id1:seq<Id>, id2
         }
     }
 }
+
+
+// lemma AddingBanListIsAllowed(t1:LambdaTerm,x:Id,t2:LambdaTerm,ids:seq<Id>,ids2:seq<Id>)
+//     requires allUnique(ids) && allUnique(ids2)
+//      requires allUnique(ids)
+//         requires var s1:=vars(t1);
+//          allUnique(s1) && includes(ids,s1) && x in ids 
+//     requires var s2:=vars(t2);
+//          allUnique(s2)  && includes(ids,s2) && x in ids
+//     ensures var ids':=reunion(ids,ids2);
+//     alphaEquivalence(caSubstitution'(t1,x,t2,ids),caSubstitution'(t1,x,t2,ids'))
+// {
+
+// }
