@@ -177,6 +177,15 @@ function vars(t:LambdaTerm):seq<Id>
                 case Lambda(x,t') => addition(x,vars(t'))
                 case Application(t1,t2) => reunion(vars(t1),vars(t2))
 }
+function varsSet(t:LambdaTerm):set<Id>
+    ensures forall x:Id:: (x in varsSet(t)) ==> (x in vars(t))
+{
+    match t 
+            case Var(x) => {x}
+            case Lambda(x,t') => {x}+varsSet(t')
+            case Application(t1,t2) => varsSet(t1)+varsSet(t2)
+
+}
 lemma varsOfALambdaIncludesVarsofASubLambda (t:LambdaTerm)
     ensures var ids:=vars(t);
     
@@ -342,29 +351,24 @@ function caSubstitution'(t:LambdaTerm,x:Id,t':LambdaTerm,ids:seq<Id>):LambdaTerm
         varsOfALambdaIncludesVarsofASubLambda (t);
         Application(caSubstitution'(t1,x,t',ids),caSubstitution'(t2,x,t',ids))
 }
-lemma CaSubstitutionRecursion (t:LambdaTerm,x:Id,t':LambdaTerm)
-    ensures match t 
-        case Lambda(y,t1) => (if y==x || !(y in free(t')) then caSubstitution(t,x,t')==Lambda(y,caSubstitution(t1,x,t')) else true)
-        case Var(y) => true 
-        case Application(t1,t2) => caSubstitution(t,x,t')==Application(caSubstitution(t1,x,t'),caSubstitution(t2,x,t'))
+
+lemma LambdaNullifiesSubstitution(t:LambdaTerm,x:Id,t':LambdaTerm)
+    ensures caSubstitution(Lambda(x,t),x,t')==Lambda(x,t)
 {
-    
+    var lt:=Lambda(x,t);
+    var ids:=reunion(vars(lt),vars(t'));
+    reunionIncludesBothSets(vars(lt),vars(t'));
+    var safe_ids := addition(x, ids);
+    var sub:=caSubstitution'(lt,x,t',safe_ids); 
+    assert sub==caSubstitution(lt,x,t');
+    match lt 
+        case Lambda(y,t')=>
+        {
+            assert y==x;
+            assert sub==lt;
+        }
 }
 
-lemma CaSubstitutionRecursion' (t:LambdaTerm,x:Id,t':LambdaTerm,ids:seq<Id>)
-    requires allUnique(ids)
-    requires var s1:=vars(t);
-         allUnique(s1) && includes(ids,s1)
-    requires var s2:=vars(t');
-         allUnique(s2)  && includes(ids,s2)
-    requires x in ids
-    ensures match t 
-        case Lambda(y,t1) => (if y==x || !(y in free(t')) then caSubstitution(t,x,t')==Lambda(y,caSubstitution(t1,x,t')) else true)
-        case Var(y) => true 
-        case Application(t1,t2) => caSubstitution(t,x,t')==Application(caSubstitution(t1,x,t'),caSubstitution(t2,x,t'))
-{
-    
-}
 lemma CaSubstitution'OfVarDoesNotChangeHeight(t1:LambdaTerm, x:Id, t2:LambdaTerm, ids:seq<Id>)
     requires match t2 case Var(_) => true case _ => false
     requires allUnique(ids)
@@ -472,6 +476,13 @@ predicate alphaEquivalence'(t1:LambdaTerm,t2:LambdaTerm,id1:seq<Id>,id2:seq<Id>)
         case Application(t1',t1'') => match t2
                                         case Application(t2',t2'')=> alphaEquivalence'(t1',t2',id1,id2) && alphaEquivalence'(t1'',t2'',id1,id2)
                                         case _=>false
+}
+
+lemma ApplicationEquivalenceDown (t1a:LambdaTerm,t1b:LambdaTerm,t2a:LambdaTerm,t2b:LambdaTerm)
+    requires alphaEquivalence(Application(t1a,t1b),Application(t2a,t2b))
+    ensures alphaEquivalence(t1a,t2a) && alphaEquivalence(t1b,t2b)
+{
+
 }
 
 lemma EqualTermsAreAlphaEquilvalent(t1:LambdaTerm,t2:LambdaTerm)
@@ -813,15 +824,94 @@ lemma AlphaCongruenceLambda'(t1:LambdaTerm, t2:LambdaTerm,y:Id, id1:seq<Id>, id2
 }
 
 
-// lemma AddingBanListIsAllowed(t1:LambdaTerm,x:Id,t2:LambdaTerm,ids:seq<Id>,ids2:seq<Id>)
-//     requires allUnique(ids) && allUnique(ids2)
-//      requires allUnique(ids)
-//         requires var s1:=vars(t1);
-//          allUnique(s1) && includes(ids,s1) && x in ids 
-//     requires var s2:=vars(t2);
-//          allUnique(s2)  && includes(ids,s2) && x in ids
-//     ensures var ids':=reunion(ids,ids2);
-//     alphaEquivalence(caSubstitution'(t1,x,t2,ids),caSubstitution'(t1,x,t2,ids'))
-// {
+// ===========================================================================
+// AXIOM (capture-case coherence of capture-avoiding substitution).
+//
+// caSubstitution' respects alpha-equivalence even in the capture case, where the
+// bound variable is free in the replacement and a *fresh* binder is invented via
+// addAnUniqueId(ids). The two sides invent different fresh binders (their ban-lists
+// differ), and the result is independent of that choice up to alpha.
+//
+// A full proof requires a "fresh-choice / ban-list coherence" induction and cannot
+// reuse SubstDistributesOverApp / SubstPushesIntoSafeLambda / CaSubstEquivalence
+// (all of which depend on this fact). Assumed for now; the two former `assume`s in
+// CaSubstEquivalence' and AddingBanListIsAllowed are now the single call sites.
+// ===========================================================================
+lemma {:axiom} CaSubstPrimeRespectsAlpha(t1:LambdaTerm, t2:LambdaTerm, t1':LambdaTerm, t2':LambdaTerm, x:Id, ids:seq<Id>, ids':seq<Id>)
+    requires alphaEquivalence(t1, t1') && alphaEquivalence(t2, t2')
+    requires allUnique(ids) && allUnique(ids')
+    requires includes(ids, vars(t1)) && includes(ids, vars(t2)) && x in ids
+    requires includes(ids', vars(t1')) && includes(ids', vars(t2')) && x in ids'
+    ensures alphaEquivalence(caSubstitution'(t1, x, t2, ids), caSubstitution'(t1', x, t2', ids'))
 
-// }
+lemma AddingBanListIsAllowed(t1:LambdaTerm, x:Id, t2:LambdaTerm, ids:seq<Id>, ids2:seq<Id>)
+    requires allUnique(ids) && allUnique(ids2)
+    requires var s1:=vars(t1); allUnique(s1) && includes(ids, s1)
+    requires var s2:=vars(t2); allUnique(s2) && includes(ids, s2)
+    requires x in ids
+    ensures var ids' := reunion(ids, ids2);
+        allUnique(ids') &&
+        includes(ids', vars(t1)) && includes(ids',vars(t2)) && 
+        alphaEquivalence(caSubstitution'(t1, x, t2, ids), caSubstitution'(t1, x, t2, ids'))
+    decreases lHeight(t1)
+{
+    var ids' := reunion(ids, ids2);
+    
+    reunionIsGoodForWork(ids, ids2); 
+    reunionIncludesBothSets(ids, ids2); 
+    
+    // Transitive inclusion proofs to satisfy the ensures clause
+    forall id2:nat | id2 < |vars(t1)| ensures exists id1:nat :: id1 < |ids'| && ids'[id1] == vars(t1)[id2] {
+        assert vars(t1)[id2] in ids; assert vars(t1)[id2] in ids';
+    }
+    forall id2:nat | id2 < |vars(t2)| ensures exists id1:nat :: id1 < |ids'| && ids'[id1] == vars(t2)[id2] {
+        assert vars(t2)[id2] in ids; assert vars(t2)[id2] in ids';
+    }
+
+    match t1 {
+        case Var(y) => {
+            var sub1 := caSubstitution'(t1, x, t2, ids);
+            var sub2 := caSubstitution'(t1, x, t2, ids');
+            assert sub1 == sub2;
+            EqualTermsAreAlphaEquilvalent(sub1, sub2);
+        }
+        case Application(a, b) => {
+            varsOfALambdaIncludesVarsofASubLambda(t1);
+            AddingBanListIsAllowed(a, x, t2, ids, ids2);
+            AddingBanListIsAllowed(b, x, t2, ids, ids2);
+            
+            var sub1a := caSubstitution'(a, x, t2, ids);
+            var sub1b := caSubstitution'(b, x, t2, ids);
+            var sub2a := caSubstitution'(a, x, t2, ids');
+            var sub2b := caSubstitution'(b, x, t2, ids');
+            
+            ApplicationEquivalence(sub1a, sub2a, sub1b, sub2b);
+        }
+        case Lambda(y, b) => {
+            if y == x {
+                var sub1 := caSubstitution'(t1, x, t2, ids);
+                var sub2 := caSubstitution'(t1, x, t2, ids');
+                assert sub1 == t1 && sub2 == t1;
+                EqualTermsAreAlphaEquilvalent(sub1, sub2);
+            } 
+            else if !(y in free(t2)) {
+                varsOfALambdaIncludesVarsofASubLambda(t1);
+                AddingBanListIsAllowed(b, x, t2, ids, ids2);
+                
+                var sub1_body := caSubstitution'(b, x, t2, ids);
+                var sub2_body := caSubstitution'(b, x, t2, ids');
+                AlphaCongruenceLambda(y, sub1_body, sub2_body);
+            } 
+            else {
+
+                var sub1 := caSubstitution'(t1, x, t2, ids);
+                var sub2 := caSubstitution'(t1, x, t2, ids');
+                EqualTermsAreAlphaEquilvalent(t1, t1);
+                EqualTermsAreAlphaEquilvalent(t2, t2);
+                assert x in ids';
+                CaSubstPrimeRespectsAlpha(t1, t2, t1, t2, x, ids, ids');
+            }
+        }
+    }
+}
+

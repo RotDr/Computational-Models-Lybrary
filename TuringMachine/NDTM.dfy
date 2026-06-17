@@ -1,4 +1,6 @@
-include "objects.dfy"
+include "./../objects.dfy"
+
+
 datatype Symbol = NonBlankSymbol (s : string) | Blank 
 
 type InputSymbols = set<Symbol>
@@ -8,7 +10,7 @@ ghost predicate isInputValid (input:seq<string>,inputSymbols:InputSymbols)
   forall i:string :: (i in input) ==> (NonBlankSymbol(i) in inputSymbols)
 }
 
-type AdditionalTapeSymbols = set<Symbol> // Blank e mereu acelasi indiferent de tm
+type AdditionalTapeSymbols = set<Symbol> 
 
 ghost predicate isTapeSymbolsValid (inputS:InputSymbols,ats:AdditionalTapeSymbols)
 {
@@ -18,6 +20,22 @@ ghost predicate isTapeSymbolsValid (inputS:InputSymbols,ats:AdditionalTapeSymbol
 type iseq<T> = int -> T
 
 type Tape = iseq<Symbol>
+
+datatype Conclusion = Accept | Reject 
+
+datatype State = State (s:string, c:Option<Conclusion>)
+
+
+datatype Configuration = Configuration(s : State, tape : iseq<Symbol>,head:int)
+
+datatype Key = Key(state : State, symbol : Symbol)
+
+datatype Direction = Left | Right
+ 
+datatype Action = Action(state : State, symbol : Symbol, direction : Direction)
+ 
+type Transitions = map<Key,seq<Action>> 
+
 
 function moveLeft(con:Configuration) : Configuration
 {
@@ -31,20 +49,8 @@ function moveRight(con : Configuration) : Configuration
     case Configuration(s,tape,head) => Configuration(s,tape,head+1)
 }
 
-datatype Conclusion = Accept | Reject 
-datatype State = State (s:string, c:Option<Conclusion>)
 
 
-
-datatype Configuration = Configuration(s : State, tape : iseq<Symbol>,head:int)
-
-datatype Key = Key(state : State, symbol : Symbol)
-
-datatype Direction = Left | Right
- 
-datatype Action = Action(state : State, symbol : Symbol, direction : Direction)
- 
-type Transitions = map<Key,seq<Action>> 
 ghost predicate isTransitionsValid(delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols)
   requires isTapeSymbolsValid(inputS,addTapeS)
 {
@@ -54,6 +60,7 @@ ghost predicate isTransitionsValid(delta:Transitions,inputS:InputSymbols,addTape
                                                                                                           match i 
                                                                                                             case Action(_,s1,_) => s1 in inputS+addTapeS))
 }
+
 predicate isPozInTransitions(config : Configuration, delta : Transitions, poz:int)
 {
   match config 
@@ -62,6 +69,8 @@ predicate isPozInTransitions(config : Configuration, delta : Transitions, poz:in
                                              else 
                                                 true
 }
+
+
 function applyTransition(config : Configuration, delta : Transitions, poz:int) : Option<Configuration>
   requires isPozInTransitions(config, delta, poz)
 {
@@ -76,12 +85,15 @@ function applyTransition(config : Configuration, delta : Transitions, poz:int) :
                       
 
 }
+
+
 function changeSymbol(tape: Tape, head:int,newSymbol:Symbol) : Tape
 {
     i =>
         if i!=head then tape(i)
         else newSymbol
 }
+
 function initialTape(input : seq<string>) : iseq<Symbol>
 {
     i =>
@@ -89,20 +101,19 @@ function initialTape(input : seq<string>) : iseq<Symbol>
         else Blank
 }
 
-function initialConfiguration (input: seq<string>, q:State, inputS:InputSymbols)  :Configuration       // avem nevoie de o stare initiala
+function initialConfiguration (input: seq<string>, q:State, inputS:InputSymbols)  :Configuration    
   requires isInputValid(input,inputS)
 {
     Configuration(q,initialTape(input),0)
 }
 
 
-ghost predicate isThereAClosedTransitionInNSteps(delta:Transitions, conf1:Configuration, conf2:Configuration, n:nat) // functii de tranzitii
-// definitia asta era flawed initial incat nu ia in considerare cazul particular de 0
+ghost predicate isThereAClosedTransitionInNSteps(delta:Transitions, conf1:Configuration, conf2:Configuration, n:nat) 
     decreases n
 {
   if n==0 then conf1==conf2
     else  
-  exists conf',poz:nat::(isPozInTransitions(conf1,delta,poz)) && applyTransition(conf1,delta,poz)==Some(conf') && isThereAClosedTransitionInNSteps(delta,conf',conf2,n-1) // problema 1 LOOPING problema 2 nu se duce in directia buna))
+  exists conf',poz:nat::(isPozInTransitions(conf1,delta,poz)) && applyTransition(conf1,delta,poz)==Some(conf') && isThereAClosedTransitionInNSteps(delta,conf',conf2,n-1) 
 }
 
 ghost predicate isThereAClosedTransition(delta:Transitions,conf1:Configuration, conf2:Configuration)
@@ -110,20 +121,29 @@ ghost predicate isThereAClosedTransition(delta:Transitions,conf1:Configuration, 
   exists n:nat:: isThereAClosedTransitionInNSteps(delta, conf1, conf2, n)
 }
 
+
+
 function Pow(n:nat,m:nat) : nat
 {
   if m==0 then 1
   else n*Pow(n,m-1)
 }
+
 ghost predicate isPolynomial (n:nat,m:int)
 {
   exists x:nat ::Pow(n,x)<=m && Pow(n,x+1)>=m
 }
+
 ghost predicate isThereAClosedTransitionInPolynomialTime(delta:Transitions, conf1:Configuration,conf2:Configuration,m:int)
 {
-  exists n:nat:: isThereAClosedTransitionInNSteps(delta, conf1, conf2, n) && isPolynomial(n,m)  // de facut DTM equivalent 
+  exists n:nat:: isThereAClosedTransitionInNSteps(delta, conf1, conf2, n) && isPolynomial(n,m)  
 }
+
+
+
 type Language=set<seq<string>>
+
+
 predicate isConfAccepted(conf:Configuration)
 {
     match conf 
@@ -141,13 +161,13 @@ predicate isConfRejected(conf:Configuration)
                                                           case None => false
                                                           case Some(con) => con==Reject
 }
+
 ghost predicate canAStateReachAFinalState(delta : Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,conf1:Configuration)
   requires isTapeSymbolsValid(inputS,addTapeS)
   requires isTransitionsValid(delta,inputS,addTapeS)
 {
   exists conf:Configuration :: ( isConfAccepted(conf) || isConfRejected(conf))  && isThereAClosedTransition(delta,conf1,conf)
 }
-
 
 ghost predicate isAcceptedInTM (delta : Transitions, q0:State,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,input:seq<string>)
   requires isTapeSymbolsValid(inputS,addTapeS)
@@ -175,6 +195,8 @@ lemma AcceptedInTMInPolynomialTime(delta:Transitions,q0:State,inputS:InputSymbol
 {
 
 }
+
+
 ghost predicate isRejectedInTM (delta : Transitions, q0:State,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,input:seq<string>)
   requires isTapeSymbolsValid(inputS,addTapeS)
   requires isTransitionsValid(delta,inputS,addTapeS)
@@ -183,6 +205,8 @@ ghost predicate isRejectedInTM (delta : Transitions, q0:State,inputS:InputSymbol
   exists conf:Configuration :: isConfRejected(conf) && isThereAClosedTransition(delta,initialConfiguration(input,q0,inputS),conf)
 
 } 
+
+
 ghost predicate isLanguageAcceptedInTM (delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,q0:State,lang:Language)
     requires isTapeSymbolsValid(inputS,addTapeS)
     requires isTransitionsValid(delta,inputS,addTapeS)
@@ -192,6 +216,7 @@ ghost predicate isLanguageAcceptedInTM (delta:Transitions,inputS:InputSymbols,ad
     && 
     isAcceptedInTM(delta,q0,inputS,addTapeS,input))
 }
+
 ghost predicate isLanguageAcceptedInTMInPolynomialTime(delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,q0:State,lang:Language)
   requires isTapeSymbolsValid(inputS,addTapeS)
   requires isTransitionsValid(delta,inputS,addTapeS)
@@ -202,34 +227,8 @@ ghost predicate isLanguageAcceptedInTMInPolynomialTime(delta:Transitions,inputS:
     isAcceptedInTMInPolynomialTime(delta,q0,inputS,addTapeS,input))
 }
 
-lemma AcceptedInTMEquivalence (delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,q0:State,lang:Language)
-  requires isTapeSymbolsValid(inputS,addTapeS)
-  requires isTransitionsValid(delta,inputS,addTapeS)
-{
-
-}
 
 
-// ghost predicate isLanguageNPHard (A:Language)
-//   requires isLanguageDecidable(A)
-// {
-//   forall B:Language :: isLanguageNPTIME1(B) ==> 
-//   (exists r:reduction :: isReductionBetweenLanguages(B,A,r))  // INCOMPLET, nu cred ca pot face o functie, imi trebuie o lemma
-// }
-// type reduction = seq<string>-> seq<string> // ASTA ESTE UN MAPPING REDUCTION, NU POLYNOMIAL REDUCTION 
-
-// ghost predicate isReductionBetweenLanguages(A:Language,B:Language,r:reduction)
-//   requires isLanguageDecidable(A) && isLanguageDecidable(B)
-// {
-//   forall input:seq<string> :: (input in A) <==> (r(input) in B) 
-// }
 
 
-// defineste un limbaj si limbaj decidabil in dafny
-// inchidere tranzition
-// reduceable
-// codare a unui limbaj np complete
-//https://lucatrevisan.github.io/30540/notes-np4.pdf
-// https://www.csd.uoc.gr/~hy380/slides/18-NPComplete.pdf
-//https://people.clarkson.edu/~alexis/PCMI/Notes/lectureB07.pdf
-// https://dl.acm.org/doi/epdf/10.1145/1806689.1806724
+

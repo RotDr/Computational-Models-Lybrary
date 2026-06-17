@@ -1,5 +1,5 @@
 include "DTM.dfy"
-include "turing_machine.dfy"
+include "NDTM.dfy"
 
 ghost predicate isTMADecider (delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,q0:State)
   requires isTapeSymbolsValid(inputS,addTapeS)

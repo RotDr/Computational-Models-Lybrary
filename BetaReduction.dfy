@@ -70,9 +70,10 @@ predicate betaReductionClosure (t1:LambdaTerm,t2:LambdaTerm)
 ghost predicate betaReducationInNSteps (t1:LambdaTerm,t2:LambdaTerm,n:nat)
     decreases n
 {
-    if n==0 then t1==t2 
+    if n==0 then alphaEquivalence(t1,t2)
     else
-        exists t':LambdaTerm:: betaReductionClosure(t1,t')  && betaReducationInNSteps(t',t2,n-1)
+        exists s:LambdaTerm, t':LambdaTerm ::
+            alphaEquivalence(t1,s) && betaReductionClosure(s,t') && betaReducationInNSteps(t',t2,n-1)
 }
 
 ghost predicate betaReducationsClosure(t1:LambdaTerm,t2:LambdaTerm)

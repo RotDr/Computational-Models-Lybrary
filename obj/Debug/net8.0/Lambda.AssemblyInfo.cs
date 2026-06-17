@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Lambda")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4f9757be8a4b5f9141614f734481ceca767ff8a1")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+65d006aea4633013625a755db4e7cdca66908f74")]
 [assembly: System.Reflection.AssemblyProductAttribute("Lambda")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Lambda")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
