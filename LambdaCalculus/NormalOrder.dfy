@@ -1,4 +1,4 @@
-include "Lambda.dfy"
+include "Substitutions.dfy"
 
 function normalOrderStep(t:LambdaTerm) : Option<LambdaTerm> 
         requires var s1:=vars(t);

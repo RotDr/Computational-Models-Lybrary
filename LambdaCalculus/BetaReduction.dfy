@@ -1,4 +1,4 @@
-include "Lambda.dfy"
+include "AlphaEquivalence.dfy"
 
 predicate isCorrectForBetaReduction(t:LambdaTerm)
 {

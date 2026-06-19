@@ -1,5 +1,5 @@
-include "objects.dfy"
-include "turing_machine.dfy"
+include "./../objects.dfy"
+include "./../TuringMachine/NDTM.dfy"
 type certificate=seq<string>
  predicate isCertificateCorrectForm (k:certificate)
 {

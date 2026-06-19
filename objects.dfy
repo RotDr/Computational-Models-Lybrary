@@ -1,5 +1,24 @@
 datatype circuitCell = AND(pos1:nat,pos2:nat) | OR(pos1:nat,pos2:nat) | NOT(pos:nat) | VARIABLE(x:string) 
 datatype Option<T> = Some(t:T) |None
+type Id= nat
+datatype LambdaTerm = Var(id:Id) | Lambda(x:Id,t:LambdaTerm) | Application( t1:LambdaTerm, t2:LambdaTerm)
+
+
+function max(a:nat,b:nat) :nat 
+    ensures var maxi:=max(a,b);
+    maxi>=a && maxi>=b && (maxi==a || maxi==b)
+{
+    if a>b then a else b 
+}
+
+function minim (a:nat,b:nat) : nat
+    ensures minim(a,b)<=a && minim(a,b)<=b
+    ensures minim(a,b)==a || minim(a,b)==b
+{
+    if a>b then b 
+    else a 
+}
+
 type circuit=seq<circuitCell>
 type stringNat = s: string |
     |s| > 0 && (|s| > 1 ==> s[0] != '0') &&

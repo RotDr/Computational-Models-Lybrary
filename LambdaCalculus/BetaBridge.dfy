@@ -1,5 +1,5 @@
 include "Diamond.dfy"
-
+include "ParallelReductionClosure.dfy"
 
 
 lemma {:vcs_split_on_every_assert} BetaStepIsPar(t:LambdaTerm, choice:nat)
@@ -124,18 +124,7 @@ lemma BetaStarToParStar(a:LambdaTerm, b:LambdaTerm)
     BetaStarToParStarN(a, b, n);
 }
 
-// ===========================================================================
-// STEP 3 (SKETCH — the bodies are stubs to be filled).
-// Note: ParStarToBetaStar already exists in Diamond.dfy (stub); fill it there
-// with:  var n:nat :| parallelReductionInNSteps(a,b,n); ParStarToBetaStarN(a,b,n);
-// ===========================================================================
 
-// ---------------------------------------------------------------------------
-// β* foundations — free now that betaReducationInNSteps carries a leading α.
-// ---------------------------------------------------------------------------
-
-// Left-α-closure of the n-step relation: merge an incoming α into the step's
-// own leading α.
 lemma BetaInNStepsLeftAlpha(u:LambdaTerm, t1:LambdaTerm, t2:LambdaTerm, n:nat)
     requires alphaEquivalence(u, t1)
     requires betaReducationInNSteps(t1, t2, n)
@@ -190,7 +179,6 @@ lemma BetaStarTrans(a:LambdaTerm, b:LambdaTerm, c:LambdaTerm)
 
 }
 
-// β* is not α-closed, so push an α-variant of the right endpoint through.
 lemma BetaStarAlphaRight(a:LambdaTerm, b:LambdaTerm, b':LambdaTerm)
     requires betaReducationsClosure(a, b)
     requires alphaEquivalence(b, b')
@@ -199,11 +187,6 @@ lemma BetaStarAlphaRight(a:LambdaTerm, b:LambdaTerm, b':LambdaTerm)
     assert betaReducationsClosure(a, b) && alphaEquivalence(b, b');
 }
 
-// ---------------------------------------------------------------------------
-// β* congruences — a contraction inside a context is still a contraction.
-// ---------------------------------------------------------------------------
-
-// Single β-step under a λ (λ is never a redex root, so the index is unchanged).
 lemma LambdaCongStep(x:Id, M:LambdaTerm, M':LambdaTerm)
     requires betaReductionClosure(M, M')
     ensures  betaReductionClosure(Lambda(x, M), Lambda(x, M'))
@@ -241,8 +224,6 @@ lemma LambdaCongBetaStar(x:Id, M:LambdaTerm, M':LambdaTerm)
     LambdaCongInN(x, M, M', n);
 }
 
-// Single β-step in the rator. When App(P,Q) is itself a redex, reducing inside
-// P uses choice c+1 (choice 0 is the root); otherwise choice c.
 lemma AppCongLeftStep(P:LambdaTerm, P':LambdaTerm, Q:LambdaTerm)
     requires betaReductionClosure(P, P')
     ensures  betaReductionClosure(Application(P, Q), Application(P', Q))
@@ -265,8 +246,6 @@ lemma AppCongLeftStep(P:LambdaTerm, P':LambdaTerm, Q:LambdaTerm)
         assert betaReductionStep(t, choice) == Application(P', Q);
     }
 }
-
-// Single β-step in the rand. Indices are offset past P's redexes (and the root).
 lemma AppCongRightStep(P:LambdaTerm, Q:LambdaTerm, Q':LambdaTerm)
     requires betaReductionClosure(Q, Q')
     ensures  betaReductionClosure(Application(P, Q), Application(P, Q'))
@@ -348,7 +327,6 @@ lemma AppCongRightBetaStar(P:LambdaTerm, Q:LambdaTerm, Q':LambdaTerm)
     AppCongRightInN(P, Q, Q', n);
 }
 
-// A single β-step is a β*-sequence (1 step).
 lemma StepIsBetaStar(a:LambdaTerm, b:LambdaTerm)
     requires betaReductionClosure(a, b)
     ensures  betaReducationsClosure(a, b)
@@ -385,10 +363,9 @@ lemma ParStepIsBetaStar(a:LambdaTerm, b:LambdaTerm)
     }
     match a {
         case Var(z) => {
-            assert false;   // Var ։ b forces alpha(a,b), handled above.
+            assert false;   
         }
         case Lambda(x, M) => {
-            // rule2: recurse under the binder, lift via LambdaCongBetaStar, α-congruence.
             LambdaParallelLemma(M, b, x);
             var M' :| parallelReduction(M, M') && alphaEquivalence(Lambda(x, M'), b);
             ParStepIsBetaStar(M, M');
@@ -402,7 +379,6 @@ lemma ParStepIsBetaStar(a:LambdaTerm, b:LambdaTerm)
             AlphaParallelLemma(P, Q, b);
             if (exists Pp:LambdaTerm, Qp:LambdaTerm ::
                     parallelReduction(P,Pp) && parallelReduction(Q,Qp) && alphaEquivalence(Application(Pp,Qp), b)) {
-                // rule3: reduce rator then rand, splice with BetaStarTrans.
                 var Pp, Qp :| parallelReduction(P,Pp) && parallelReduction(Q,Qp) && alphaEquivalence(Application(Pp,Qp), b);
                 ParStepIsBetaStar(P, Pp);
                 var P'' :| betaReducationsClosure(P, P'') && alphaEquivalence(P'', Pp);
@@ -415,7 +391,6 @@ lemma ParStepIsBetaStar(a:LambdaTerm, b:LambdaTerm)
                 AlphaEquivTransitive(Application(P'',Q''), Application(Pp,Qp), b);
                 assert betaReducationsClosure(a, Application(P'',Q'')) && alphaEquivalence(Application(P'',Q''), b);
             } else {
-                // rule4: P = λx.Pb. Congruence to (λx.P'')Q'', then ONE root contraction.
                 assert P.Lambda?;
                 var x := P.x;
                 var Pb := P.t;
@@ -425,16 +400,13 @@ lemma ParStepIsBetaStar(a:LambdaTerm, b:LambdaTerm)
                 var P'' :| betaReducationsClosure(Pb, P'') && alphaEquivalence(P'', P');
                 ParStepIsBetaStar(Q, Q');
                 var Q'' :| betaReducationsClosure(Q, Q'') && alphaEquivalence(Q'', Q');
-                // (λx.Pb)Q →β* (λx.P'')Q →β* (λx.P'')Q''
                 LambdaCongBetaStar(x, Pb, P'');
                 AppCongLeftBetaStar(Lambda(x,Pb), Lambda(x,P''), Q);
                 AppCongRightBetaStar(Lambda(x,P''), Q, Q'');
                 BetaStarTrans(Application(Lambda(x,Pb),Q), Application(Lambda(x,P''),Q), Application(Lambda(x,P''),Q''));
-                // root contraction (λx.P'')Q'' →β P''[Q''/x]
                 RootBetaStep(x, P'', Q'');
                 StepIsBetaStar(Application(Lambda(x,P''),Q''), caSubstitution(P'', x, Q''));
                 BetaStarTrans(Application(Lambda(x,Pb),Q), Application(Lambda(x,P''),Q''), caSubstitution(P'', x, Q''));
-                // α: P''[Q''/x] =α P'[Q'/x] =α b
                 CaSubstEquivalence(P'', Q'', P', Q', x);
                 AlphaEquivSymmetric(b, caSubstitution(P', x, Q'));
                 AlphaEquivTransitive(caSubstitution(P'', x, Q''), caSubstitution(P', x, Q'), b);
@@ -444,14 +416,12 @@ lemma ParStepIsBetaStar(a:LambdaTerm, b:LambdaTerm)
     }
 }
 
-//  ։*  ⊆  →β*   (up to α)
 lemma ParStarToBetaStarN(a:LambdaTerm, b:LambdaTerm, n:nat)
     requires parallelReductionInNSteps(a, b, n)
     ensures  exists b':LambdaTerm :: betaReducationsClosure(a, b') && alphaEquivalence(b', b)
     decreases n
 {
     if n == 0 {
-        // alpha(a,b); witness b' = a.
         EqualTermsAreAlphaEquilvalent(a, a);
         assert betaReducationInNSteps(a, a, 0);
         assert betaReducationsClosure(a, a) && alphaEquivalence(a, b);
@@ -461,15 +431,12 @@ lemma ParStarToBetaStarN(a:LambdaTerm, b:LambdaTerm, n:nat)
         var a1' :| betaReducationsClosure(a, a1') && alphaEquivalence(a1', a1);
         ParStarToBetaStarN(a1, b, n-1);
         var b'' :| betaReducationsClosure(a1, b'') && alphaEquivalence(b'', b);
-        // a1' =α a1 and a1 →β* b''  ⟹  a1' →β* b''  (left-α-closure)
         BetaStarLeftAlpha(a1', a1, b'');
-        // a →β* a1' →β* b''
         BetaStarTrans(a, a1', b'');
         assert betaReducationsClosure(a, b'') && alphaEquivalence(b'', b);
     }
 }
 
-//  ։*  ⊆  →β*   (up to α) — closure form.
 lemma ParStarToBetaStar(a:LambdaTerm, b:LambdaTerm)
     requires parallelReductionClosure(a, b)
     ensures  exists b':LambdaTerm :: betaReducationsClosure(a, b') && alphaEquivalence(b', b)
@@ -478,10 +445,6 @@ lemma ParStarToBetaStar(a:LambdaTerm, b:LambdaTerm)
     ParStarToBetaStarN(a, b, n);
 }
 
-// ===========================================================================
-// FINAL : Church-Rosser for →β (up to α). Real body — verifies once the two
-// step-3 stubs (ParStepIsBetaStar / Diamond's ParStarToBetaStar) are filled.
-// ===========================================================================
 lemma ChurchRosser(a:LambdaTerm, b:LambdaTerm, c:LambdaTerm)
     requires betaReducationsClosure(a, b)
     requires betaReducationsClosure(a, c)
