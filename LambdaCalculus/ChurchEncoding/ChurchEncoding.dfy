@@ -1,4 +1,4 @@
-include "./../objects.dfy"
+include "./../../objects.dfy"
 
 predicate isTrue(t:LambdaTerm) 
 {

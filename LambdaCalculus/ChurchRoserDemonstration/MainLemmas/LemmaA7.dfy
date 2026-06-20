@@ -1,4 +1,3 @@
-include "BetaReduction.dfy"
 include "LemmaA5AndA6.dfy"
 include "LemmaA4.dfy"
 include "LemmaA3.dfy"

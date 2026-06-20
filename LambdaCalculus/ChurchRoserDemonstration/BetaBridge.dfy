@@ -1,4 +1,4 @@
-include "Diamond.dfy"
+include "MainLemmas/LemmaA7.dfy"
 include "ParallelReductionClosure.dfy"
 
 
@@ -156,7 +156,6 @@ lemma BetaInNStepsConcat(a:LambdaTerm, b:LambdaTerm, c:LambdaTerm, n:nat, m:nat)
     }
 }
 
-// Left-α-closure at the closure (∃n) level.
 lemma BetaStarLeftAlpha(u:LambdaTerm, a:LambdaTerm, b:LambdaTerm)
     requires alphaEquivalence(u, a)
     requires betaReducationsClosure(a, b)
@@ -347,7 +346,6 @@ lemma RootBetaStep(x:Id, M:LambdaTerm, Q:LambdaTerm)
     assert betaReductionStep(t, 0) == betaReduction(t) == caSubstitution(M, x, Q);
 }
 
-// *** the hard one ***  one parallel step expands to a β-sequence (up to α).
 lemma ParStepIsBetaStar(a:LambdaTerm, b:LambdaTerm)
     requires parallelReduction(a, b)
     ensures  exists b':LambdaTerm :: betaReducationsClosure(a, b') && alphaEquivalence(b', b)

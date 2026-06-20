@@ -1,4 +1,4 @@
-include "AlphaEquivalence.dfy"
+include "../AlphaEquivalence.dfy"
 
 
 

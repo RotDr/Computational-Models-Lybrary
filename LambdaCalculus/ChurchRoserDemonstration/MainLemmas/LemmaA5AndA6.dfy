@@ -1,4 +1,4 @@
-include "ParallelReduction.dfy"
+include "../ParallelReduction.dfy"
 lemma LambdaParallelLemma (M:LambdaTerm,N:LambdaTerm,x:Id) // LEMMA A5
     requires parallelReduction(Lambda(x,M),N)
     ensures exists M': LambdaTerm :: parallelReduction(M, M') && alphaEquivalence(Lambda(x, M'), N)

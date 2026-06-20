@@ -1,7 +1,7 @@
-include "BetaReduction.dfy"
-include "LemmaA5AndA6.dfy"
-include "HelperLemmasForA3.dfy"
-include "Diamond.dfy"
+include "../BetaReduction.dfy"
+include "MainLemmas/LemmaA5AndA6.dfy"
+include "Helpers/HelperLemmasForA3.dfy"
+include "MainLemmas/LemmaA7.dfy"
 
 
 ghost predicate parallelReductionInNSteps(t1:LambdaTerm,t2:LambdaTerm,n:nat)

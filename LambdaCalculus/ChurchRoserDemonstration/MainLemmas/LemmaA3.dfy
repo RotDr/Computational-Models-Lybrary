@@ -1,6 +1,6 @@
-include "ParallelReduction.dfy"
-include "SubstitutionsAndSets.dfy"
-include "HelperLemmasForA3.dfy"
+include "../ParallelReduction.dfy"
+include "../../SubstitutionsAndSets.dfy"
+include "../Helpers/HelperLemmasForA3.dfy"
 
 lemma parallelReductionSubstitution(M:LambdaTerm,N:LambdaTerm,N':LambdaTerm,x:Id)
     requires parallelReduction(N,N')

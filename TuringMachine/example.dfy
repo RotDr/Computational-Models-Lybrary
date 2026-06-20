@@ -145,7 +145,7 @@ method Main()
     Key(q1,Blank) := [Action(qRej,Blank,Right)]
   ];
   assert one==NonBlankSymbol("1");
-  var input:=["1","1","1","1","1"];
+  var input:=["1","1","1","1"];
   var inputS:={one};
   var addTapeS:={Blank};
   print input;
@@ -169,5 +169,6 @@ method Main()
   assert haltsInDTM(deltaDTM, q0, inputS, addTapeS, input);
 
   var finalConfig := beginDTM(deltaDTM, inputS, addTapeS, q0, input);
+
 
 }

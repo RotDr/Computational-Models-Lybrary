@@ -80,4 +80,3 @@ ghost predicate betaReducationsClosure(t1:LambdaTerm,t2:LambdaTerm)
 {
     exists n:nat:: betaReducationInNSteps(t1,t2,n)
 }
-// De a demonstra confluenta pe dabaz documentului de la waterloo https://student.cs.uwaterloo.ca/~cs442/W22/extras/c-r-thm-proof.pdf

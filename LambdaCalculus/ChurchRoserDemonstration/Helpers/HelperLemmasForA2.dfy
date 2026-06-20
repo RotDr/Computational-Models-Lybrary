@@ -1,5 +1,6 @@
-include "ParallelReduction.dfy"
-include "SubstitutionsAndSets.dfy"
+include "../ParallelReduction.dfy"
+include "../../SubstitutionsAndSets.dfy"
+include "../../CaSubstAlpha.dfy"
 
 
 
@@ -257,7 +258,6 @@ lemma TheFreeOfCaSub'(M:LambdaTerm,x:Id,N:LambdaTerm,y:Id,ids:seq<Id>)
             assert !(y in free(M1));
             assert !(y in free(M2));
             varsOfALambdaIncludesVarsofASubLambda (M);
-            TheFreeOfCaSub'(M1,x,N,y,ids);
             TheFreeOfCaSub'(M1,x,N,y,ids);
             assert caSubstitution'(M,x,N,ids)==Application(caSubstitution'(M1,x,N,ids),caSubstitution'(M2,x,N,ids));
         }

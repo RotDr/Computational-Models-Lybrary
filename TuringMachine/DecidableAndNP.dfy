@@ -20,7 +20,6 @@ ghost predicate isLanguageDecidable (lang:Language)
 
 
 
-lemma DTMDeciderAlwaysHalts (delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,q0:State)
 
 
 ghost predicate isLanguageNPTIME1 (lang:Language)

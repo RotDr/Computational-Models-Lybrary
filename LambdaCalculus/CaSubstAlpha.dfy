@@ -1,14 +1,6 @@
-include "LemmaA4.dfy"
+include "AlphaEquivalence.dfy"
+include "SubstitutionsAndSets.dfy"
 
-// ===========================================================================
-// Goal of this file: prove that NAIVE substitution respects alpha-equivalence
-// on BOTH arguments, under a no-capture side condition.  This is the first,
-// fully self-contained building block toward discharging the axiom
-// CaSubstPrimeRespectsAlpha (it reuses NOTHING that depends on that axiom).
-// ===========================================================================
-
-// Inserting an "unused" context block W (disjoint from all variables of r/r')
-// in front of an existing aligned context (P1,P2) preserves alpha-equivalence.
 lemma AlphaInsertUnused(r:LambdaTerm, r':LambdaTerm, P1:seq<Id>, P2:seq<Id>, W1:seq<Id>, W2:seq<Id>)
     requires |P1| == |P2| && |W1| == |W2|
     requires alphaEquivalence'(r, r', P1, P2)
@@ -20,16 +12,16 @@ lemma AlphaInsertUnused(r:LambdaTerm, r':LambdaTerm, P1:seq<Id>, P2:seq<Id>, W1:
     match r
         case Var(y) => {
             var y' :| r' == Var(y');
-            // y in vars(r) => y !in W1 ; same on the right.
+
             findId_concat_notInLeft(W1, P1, y);
             findId_concat_notInLeft(W2, P2, y');
         }
         case Lambda(z, b) => {
             var z', b' :| r' == Lambda(z', b');
-            // alphaEquivalence'(b, b', P1+[z], P2+[z'])
+
             varsOfALambdaIncludesVarsofASubLambda(r);
             varsOfALambdaIncludesVarsofASubLambda(r');
-            // vars(b) subset vars(r), vars(b') subset vars(r')
+
             assert forall v :: v in vars(b)  ==> !(v in W1);
             assert forall v :: v in vars(b') ==> !(v in W2);
             AlphaInsertUnused(b, b', P1 + [z], P2 + [z'], W1, W2);
@@ -102,16 +94,7 @@ lemma SubstNaiveRespectsAlpha(A:LambdaTerm, A':LambdaTerm, x:Id, r:LambdaTerm, r
     SubstNaiveRespectsAlpha'(A, A', x, r, r', [], []);
 }
 
-// ===========================================================================
-// Toward the bridge "caSubstitution' = naive substitution of a freshened term".
-// Foundation lemmas (all axiom-free).
-// ===========================================================================
 
-// Substituting a variable that is not free does nothing.
-
-
-// When no binder of t is free in r, capture never triggers, so the
-// capture-avoiding substitution coincides *syntactically* with the naive one.
 lemma CaSubstIsNaiveNoCapture(t:LambdaTerm, x:Id, r:LambdaTerm, ids:seq<Id>)
     requires allUnique(ids)
     requires includes(ids, vars(t)) && includes(ids, vars(r)) && x in ids
@@ -160,8 +143,7 @@ lemma NotInVarsSubst(M:LambdaTerm, x:Id, r:LambdaTerm, Z:Id)
         }
 }
 
-// The naive substitution-commutation lemma (no capture, Z fresh in M):
-//   M[y:=Z][x:=r]  ==  M[x:=r][y:=Z].
+
 lemma SubstSwap(M:LambdaTerm, y:Id, Z:Id, x:Id, r:LambdaTerm)
     requires x != y
     requires !(y in free(r))
@@ -175,7 +157,6 @@ lemma SubstSwap(M:LambdaTerm, y:Id, Z:Id, x:Id, r:LambdaTerm)
     match M
         case Var(v) => {
             if v == x {
-                // v==x, v!=y : LHS = r[a... ] ; need y !in free(r) so r[y:=Z]=r.
                 SubstNoFree(r, y, Var(Z));
             }
         }
@@ -194,7 +175,7 @@ lemma SubstSwap(M:LambdaTerm, y:Id, Z:Id, x:Id, r:LambdaTerm)
         }
 }
 
-// Free variables are among all variables.
+
 lemma FreeInVars(t:LambdaTerm)
     ensures forall w :: w in free(t) ==> w in vars(t)
     decreases t
@@ -212,7 +193,6 @@ lemma FreeInVars(t:LambdaTerm)
         }
 }
 
-// Free-set of a variable-renaming (Z fresh in M).
 lemma FreeVarSubst(M:LambdaTerm, v:Id, Z:Id)
     requires Z != v
     requires !(Z in vars(M))
@@ -236,8 +216,7 @@ lemma FreeVarSubst(M:LambdaTerm, v:Id, Z:Id)
         }
 }
 
-// Freshening: every term is alpha-equivalent to one whose binders avoid a given
-// (allUnique) list `avoid`, with the same free variables.
+
 lemma {:vcs_split_on_every_assert} FreshenExists(s:LambdaTerm, avoid:seq<Id>)
     requires allUnique(avoid)
     ensures exists sf:LambdaTerm ::
@@ -302,8 +281,7 @@ lemma {:vcs_split_on_every_assert} FreshenExists(s:LambdaTerm, avoid:seq<Id>)
         }
 }
 
-// Unfold of caSubstitution' on a lambda in the non-capture case (isolated so the
-// function-evaluation VC stays small).
+
 lemma CaSubstLambdaUnfoldNoCapture(y:Id, b:LambdaTerm, x:Id, r:LambdaTerm, ids:seq<Id>)
     requires allUnique(ids)
     requires includes(ids, vars(Lambda(y, b))) && includes(ids, vars(r)) && x in ids
@@ -314,8 +292,7 @@ lemma CaSubstLambdaUnfoldNoCapture(y:Id, b:LambdaTerm, x:Id, r:LambdaTerm, ids:s
     varsOfALambdaIncludesVarsofASubLambda(Lambda(y, b));
 }
 
-// Unfold of substitution(tf,x,r) in the non-capture case (push under the fresh
-// binder Z, then SubstSwap). Isolated to keep the VC small.
+
 lemma SubstTfUnfold(bf:LambdaTerm, y:Id, Z:Id, x:Id, r:LambdaTerm)
     requires x != y
     requires !(y in free(r))
@@ -328,8 +305,7 @@ lemma SubstTfUnfold(bf:LambdaTerm, y:Id, Z:Id, x:Id, r:LambdaTerm)
     SubstSwap(bf, y, Z, x, r);
 }
 
-// THE BRIDGE: caSubstitution'(t,x,r,ids) is alpha-equivalent to the NAIVE
-// substitution of a freshened copy `tf` of t (binders avoid vars(r) and x).
+
 lemma {:vcs_split_on_every_assert} BridgeExists(t:LambdaTerm, x:Id, r:LambdaTerm, ids:seq<Id>)
     requires allUnique(ids)
     requires includes(ids, vars(t)) && includes(ids, vars(r)) && x in ids
@@ -371,9 +347,8 @@ lemma {:vcs_split_on_every_assert} BridgeExists(t:LambdaTerm, x:Id, r:LambdaTerm
                 && alphaEquivalence(caSubstitution'(t, x, r, ids), substitution(tf, x, r));
         }
         case Lambda(y, b) => {
-            varsOfALambdaIncludesVarsofASubLambda(t);     // includes(vars(t),vars(b)); y in vars(t)
+            varsOfALambdaIncludesVarsofASubLambda(t);    
             if y == x {
-                // caSubstitution'(λx.b,x,r,ids) == λx.b ; freshen it.
                 var avoidSeq := addition(x, vars(r));
                 FreshenExists(t, avoidSeq);
                 var tf :| alphaEquivalence(t, tf) && (forall w :: w in bound(tf) ==> !(w in avoidSeq)) && free(tf) == free(t);
@@ -388,7 +363,7 @@ lemma {:vcs_split_on_every_assert} BridgeExists(t:LambdaTerm, x:Id, r:LambdaTerm
                     && !(x in bound(tf))
                     && alphaEquivalence(caSubstitution'(t, x, r, ids), substitution(tf, x, r));
             } else if !(y in free(r)) {
-                // NON-CAPTURE: caSubstitution'(λy.b,x,r,ids) = λy.caSubstitution'(b,x,r,ids)
+
                 BridgeExists(b, x, r, ids);
                 var bf :| alphaEquivalence(b, bf) && (forall w :: w in bound(bf) ==> !(w in vars(r)))
                           && !(x in bound(bf)) && alphaEquivalence(caSubstitution'(b, x, r, ids), substitution(bf, x, r));
@@ -401,11 +376,11 @@ lemma {:vcs_split_on_every_assert} BridgeExists(t:LambdaTerm, x:Id, r:LambdaTerm
                 assert !(Z in pool);
                 assert Z != x && !(Z in vars(r)) && !(Z in vars(bf)) && !(Z in vars(b));
                 var tf := Lambda(Z, substitution(bf, y, Var(Z)));
-                // alpha(t, tf)
+
                 AlphaCongruenceLambda(y, b, bf);
                 SubstAlphaEquivalence(bf, y, Z);
                 AlphaEquivTransitive(Lambda(y, b), Lambda(y, bf), tf);
-                // caSubst' side
+
                 CaSubstLambdaUnfoldNoCapture(y, b, x, r, ids);
                 AlphaCongruenceLambda(y, caSubstitution'(b, x, r, ids), substitution(bf, x, r));
                 FreeInVars(r);
@@ -422,7 +397,7 @@ lemma {:vcs_split_on_every_assert} BridgeExists(t:LambdaTerm, x:Id, r:LambdaTerm
                     && !(x in bound(tf))
                     && alphaEquivalence(caSubstitution'(t, x, r, ids), substitution(tf, x, r));
             } else {
-                // CAPTURE: y in free(r). Mirror caSubstitution''s capture branch.
+
                 var ids0 := addAnUniqueId(ids);
                 var z0 := ids0[0];
                 var u0 := substitution(b, y, Var(z0));
@@ -432,14 +407,14 @@ lemma {:vcs_split_on_every_assert} BridgeExists(t:LambdaTerm, x:Id, r:LambdaTerm
                 var u0f :| alphaEquivalence(u0, u0f) && (forall w :: w in bound(u0f) ==> !(w in vars(r)))
                            && !(x in bound(u0f)) && alphaEquivalence(caSubstitution'(u0, x, r, ids0), substitution(u0f, x, r));
                 var tf := Lambda(z0, u0f);
-                assert !(z0 in ids);                 // addAnUniqueId
-                assert !(z0 in vars(r)) && z0 != x;  // ids contains vars(r) and x
-                assert !(z0 in vars(b));             // vars(b) subset ids
-                // alpha(t, tf)
+                assert !(z0 in ids);                 
+                assert !(z0 in vars(r)) && z0 != x;  
+                assert !(z0 in vars(b));             
+
                 SubstAlphaEquivalence(b, y, z0);
                 AlphaCongruenceLambda(z0, u0, u0f);
                 AlphaEquivTransitive(Lambda(y, b), Lambda(z0, u0), tf);
-                // caSubst' side
+
                 assert caSubstitution'(t, x, r, ids) == Lambda(z0, caSubstitution'(u0, x, r, ids0));
                 AlphaCongruenceLambda(z0, caSubstitution'(u0, x, r, ids0), substitution(u0f, x, r));
                 assert substitution(tf, x, r) == Lambda(z0, substitution(u0f, x, r));
@@ -451,11 +426,7 @@ lemma {:vcs_split_on_every_assert} BridgeExists(t:LambdaTerm, x:Id, r:LambdaTerm
         }
 }
 
-// ===========================================================================
-// THE AXIOM, PROVEN. Same signature as Lambda.dfy's `lemma {:axiom}
-// CaSubstPrimeRespectsAlpha`. Bridge both sides to naive substitutions of
-// freshened terms, then close with SubstNaiveRespectsAlpha.
-// ===========================================================================
+
 lemma CaSubstPrimeRespectsAlphaProved(t1:LambdaTerm, t2:LambdaTerm, t1':LambdaTerm, t2':LambdaTerm,
                                       x:Id, ids:seq<Id>, ids':seq<Id>)
     requires alphaEquivalence(t1, t1') && alphaEquivalence(t2, t2')
@@ -470,14 +441,92 @@ lemma CaSubstPrimeRespectsAlphaProved(t1:LambdaTerm, t2:LambdaTerm, t1':LambdaTe
     BridgeExists(t1', x, t2', ids');
     var tf1' :| alphaEquivalence(t1', tf1') && (forall w :: w in bound(tf1') ==> !(w in vars(t2')))
                 && !(x in bound(tf1')) && alphaEquivalence(caSubstitution'(t1', x, t2', ids'), substitution(tf1', x, t2'));
-    // tf1 =alpha t1 =alpha t1' =alpha tf1'
     AlphaEquivSymmetric(t1, tf1);
     AlphaEquivTransitive(tf1, t1, t1');
     AlphaEquivTransitive(tf1, t1', tf1');
-    // naive substitution respects alpha (no capture, x not a binder)
     SubstNaiveRespectsAlpha(tf1, tf1', x, t2, t2');
-    // chain the three alpha-steps
     AlphaEquivSymmetric(caSubstitution'(t1', x, t2', ids'), substitution(tf1', x, t2'));
     AlphaEquivTransitive(caSubstitution'(t1, x, t2, ids), substitution(tf1, x, t2), substitution(tf1', x, t2'));
     AlphaEquivTransitive(caSubstitution'(t1, x, t2, ids), substitution(tf1', x, t2'), caSubstitution'(t1', x, t2', ids'));
+}
+
+lemma CaSubstPrimeRespectsAlpha(t1:LambdaTerm, t2:LambdaTerm, t1':LambdaTerm, t2':LambdaTerm, x:Id, ids:seq<Id>, ids':seq<Id>)
+    requires alphaEquivalence(t1, t1') && alphaEquivalence(t2, t2')
+    requires allUnique(ids) && allUnique(ids')
+    requires includes(ids, vars(t1)) && includes(ids, vars(t2)) && x in ids
+    requires includes(ids', vars(t1')) && includes(ids', vars(t2')) && x in ids'
+    ensures alphaEquivalence(caSubstitution'(t1, x, t2, ids), caSubstitution'(t1', x, t2', ids'))
+{
+    CaSubstPrimeRespectsAlphaProved(t1, t2, t1', t2', x, ids, ids');
+}
+
+
+lemma AddingBanListIsAllowed(t1:LambdaTerm, x:Id, t2:LambdaTerm, ids:seq<Id>, ids2:seq<Id>)
+    requires allUnique(ids) && allUnique(ids2)
+    requires var s1:=vars(t1); allUnique(s1) && includes(ids, s1)
+    requires var s2:=vars(t2); allUnique(s2) && includes(ids, s2)
+    requires x in ids
+    ensures var ids' := reunion(ids, ids2);
+        allUnique(ids') &&
+        includes(ids', vars(t1)) && includes(ids',vars(t2)) && 
+        alphaEquivalence(caSubstitution'(t1, x, t2, ids), caSubstitution'(t1, x, t2, ids'))
+    decreases lHeight(t1)
+{
+    var ids' := reunion(ids, ids2);
+    
+    reunionIsGoodForWork(ids, ids2); 
+    reunionIncludesBothSets(ids, ids2); 
+    
+    forall id2:nat | id2 < |vars(t1)| ensures exists id1:nat :: id1 < |ids'| && ids'[id1] == vars(t1)[id2] {
+        assert vars(t1)[id2] in ids; assert vars(t1)[id2] in ids';
+    }
+    forall id2:nat | id2 < |vars(t2)| ensures exists id1:nat :: id1 < |ids'| && ids'[id1] == vars(t2)[id2] {
+        assert vars(t2)[id2] in ids; assert vars(t2)[id2] in ids';
+    }
+
+    match t1 {
+        case Var(y) => {
+            var sub1 := caSubstitution'(t1, x, t2, ids);
+            var sub2 := caSubstitution'(t1, x, t2, ids');
+            assert sub1 == sub2;
+            EqualTermsAreAlphaEquilvalent(sub1, sub2);
+        }
+        case Application(a, b) => {
+            varsOfALambdaIncludesVarsofASubLambda(t1);
+            AddingBanListIsAllowed(a, x, t2, ids, ids2);
+            AddingBanListIsAllowed(b, x, t2, ids, ids2);
+            
+            var sub1a := caSubstitution'(a, x, t2, ids);
+            var sub1b := caSubstitution'(b, x, t2, ids);
+            var sub2a := caSubstitution'(a, x, t2, ids');
+            var sub2b := caSubstitution'(b, x, t2, ids');
+            
+            ApplicationEquivalence(sub1a, sub2a, sub1b, sub2b);
+        }
+        case Lambda(y, b) => {
+            if y == x {
+                var sub1 := caSubstitution'(t1, x, t2, ids);
+                var sub2 := caSubstitution'(t1, x, t2, ids');
+                assert sub1 == t1 && sub2 == t1;
+                EqualTermsAreAlphaEquilvalent(sub1, sub2);
+            } 
+            else if !(y in free(t2)) {
+                varsOfALambdaIncludesVarsofASubLambda(t1);
+                AddingBanListIsAllowed(b, x, t2, ids, ids2);
+                
+                var sub1_body := caSubstitution'(b, x, t2, ids);
+                var sub2_body := caSubstitution'(b, x, t2, ids');
+                AlphaCongruenceLambda(y, sub1_body, sub2_body);
+            } 
+            else {
+
+                var sub1 := caSubstitution'(t1, x, t2, ids);
+                var sub2 := caSubstitution'(t1, x, t2, ids');
+                EqualTermsAreAlphaEquilvalent(t1, t1);
+                EqualTermsAreAlphaEquilvalent(t2, t2);
+                assert x in ids';
+                CaSubstPrimeRespectsAlpha(t1, t2, t1, t2, x, ids, ids');
+            }
+        }
+    }
 }

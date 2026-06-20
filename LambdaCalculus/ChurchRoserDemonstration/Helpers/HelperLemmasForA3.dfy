@@ -1,4 +1,4 @@
-include "LemmaA2.dfy"
+include "../MainLemmas/LemmaA2.dfy"
 
 lemma ParallelReductionAlphaInvariance(t1: LambdaTerm, t2: LambdaTerm, t1': LambdaTerm, t2': LambdaTerm)
     requires parallelReduction(t1, t2)

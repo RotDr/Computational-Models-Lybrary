@@ -1,4 +1,4 @@
-include "HelperLemmasForA2.dfy"
+include "../Helpers/HelperLemmasForA2.dfy"
 
 lemma SubstitutionLemma (M:LambdaTerm,N:LambdaTerm,P:LambdaTerm,x:Id,y:Id)
     requires x!=y
