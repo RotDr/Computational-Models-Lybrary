@@ -1,15 +1,15 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Under\\LicentaNew\\turing_machine.csproj": {}
+    "C:\\Users\\Under\\LicentaNew\\Lambda.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Under\\LicentaNew\\turing_machine.csproj": {
+    "C:\\Users\\Under\\LicentaNew\\Lambda.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Under\\LicentaNew\\turing_machine.csproj",
-        "projectName": "turing_machine",
-        "projectPath": "C:\\Users\\Under\\LicentaNew\\turing_machine.csproj",
+        "projectUniqueName": "C:\\Users\\Under\\LicentaNew\\Lambda.csproj",
+        "projectName": "Lambda",
+        "projectPath": "C:\\Users\\Under\\LicentaNew\\Lambda.csproj",
         "packagesPath": "C:\\Users\\Under\\.nuget\\packages\\",
         "outputPath": "C:\\Users\\Under\\LicentaNew\\obj\\",
         "projectStyle": "PackageReference",

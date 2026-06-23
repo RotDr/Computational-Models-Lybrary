@@ -1,0 +1,15 @@
+/home/under/Licenta/Library/Circuit-SAT/obj/Debug/net8.0/Lambda.GeneratedMSBuildEditorConfig.editorconfig
+/home/under/Licenta/Library/Circuit-SAT/obj/Debug/net8.0/Lambda.AssemblyInfoInputs.cache
+/home/under/Licenta/Library/Circuit-SAT/obj/Debug/net8.0/Lambda.AssemblyInfo.cs
+/home/under/Licenta/Library/Circuit-SAT/obj/Debug/net8.0/Lambda.csproj.CoreCompileInputs.cache
+/home/under/Licenta/Library/Circuit-SAT/obj/Debug/net8.0/Lambda.sourcelink.json
+/home/under/Licenta/Library/Circuit-SAT/Lambda
+/home/under/Licenta/Library/Circuit-SAT/obj/Debug/net8.0/Lambda.dll
+/home/under/Licenta/Library/Circuit-SAT/obj/Debug/net8.0/refint/Lambda.dll
+/home/under/Licenta/Library/Circuit-SAT/obj/Debug/net8.0/Lambda.pdb
+/home/under/Licenta/Library/Circuit-SAT/Lambda.deps.json
+/home/under/Licenta/Library/Circuit-SAT/obj/Debug/net8.0/Lambda.genruntimeconfig.cache
+/home/under/Licenta/Library/Circuit-SAT/Lambda.runtimeconfig.json
+/home/under/Licenta/Library/Circuit-SAT/Lambda.dll
+/home/under/Licenta/Library/Circuit-SAT/obj/Debug/net8.0/ref/Lambda.dll
+/home/under/Licenta/Library/Circuit-SAT/Lambda.pdb

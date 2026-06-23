@@ -954,11 +954,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Under\\Licenta\\Circuit-SAT\\turing_machine.csproj",
-      "projectName": "turing_machine",
-      "projectPath": "C:\\Users\\Under\\Licenta\\Circuit-SAT\\turing_machine.csproj",
+      "projectUniqueName": "C:\\Users\\Under\\LicentaNew\\Lambda.csproj",
+      "projectName": "Lambda",
+      "projectPath": "C:\\Users\\Under\\LicentaNew\\Lambda.csproj",
       "packagesPath": "C:\\Users\\Under\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Under\\Licenta\\Circuit-SAT\\obj\\",
+      "outputPath": "C:\\Users\\Under\\LicentaNew\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\Under\\AppData\\Roaming\\NuGet\\NuGet.Config"
