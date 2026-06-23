@@ -105,32 +105,8 @@ lemma CorrectInputHalts(
       assert isThereAClosedTransitionDTM(delta,inputS,addTapeS,init_config,halt_config);
       assert haltsInDTM(delta, q0, inputS, addTapeS, input);
     }
-    case None => {}
 }
 
-lemma LinkTransitions(
-  delta: DeterministicTransitions, 
-  inputS: InputSymbols, 
-  addTapeS: AdditionalTapeSymbols, 
-  c1: Configuration, 
-  c2: Configuration, 
-  c3: Configuration, 
-  n: nat
-)
-  requires isTapeSymbolsValid(inputS, addTapeS)
-  requires isDeterministicTransitionsValid(delta, inputS, addTapeS)
-  requires isThereAClosedTransitionInNStepsForDTM(delta, inputS, addTapeS, c1, c2, n)
-  requires applyTransitionDTM(c2, delta) == Some(c3)
-  ensures isThereAClosedTransitionInNStepsForDTM(delta, inputS, addTapeS, c1, c3, n + 1)
-  decreases n
-{
-  if n == 0 {
-  } else {
-    var c_prime :| applyTransitionDTM(c1, delta) == Some(c_prime) && 
-                   isThereAClosedTransitionInNStepsForDTM(delta, inputS, addTapeS, c_prime, c2, n-1);
-    LinkTransitions(delta, inputS, addTapeS, c_prime, c2, c3, n - 1);
-  }
-}
 method Main()
 {
   var q0:=State("q0",None);
@@ -148,9 +124,6 @@ method Main()
   var input:=["1","1","1","1"];
   var inputS:={one};
   var addTapeS:={Blank};
-  print input;
-  print "\n";
-
 
   assert isTapeSymbolsValid(inputS, addTapeS);
   assert isInputValid(input, inputS);
@@ -158,17 +131,7 @@ method Main()
   assert isTransitionsDeterministic(delta, inputS, addTapeS);
   
   var deltaDTM := fromNDTMtoDTM(delta, inputS, addTapeS);
-
-  
-
-
   CorrectInputHalts(deltaDTM, inputS, addTapeS, q0, q1, qRej,qAcc,one,input);
-
-
-
   assert haltsInDTM(deltaDTM, q0, inputS, addTapeS, input);
-
   var finalConfig := beginDTM(deltaDTM, inputS, addTapeS, q0, input);
-
-
 }

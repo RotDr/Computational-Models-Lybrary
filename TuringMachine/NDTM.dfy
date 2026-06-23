@@ -82,8 +82,7 @@ function applyTransition(config : Configuration, delta : Transitions, poz:int) :
                                                                 case Left => Some(moveLeft(Configuration(state,changeSymbol(tape,head,symbol),head)))
                                                                 case Right => Some(moveRight(Configuration(state,changeSymbol(tape,head,symbol),head)))
                                                 else None
-                      
-
+                    
 }
 
 
@@ -221,11 +220,25 @@ ghost predicate isLanguageAcceptedInTMInPolynomialTime(delta:Transitions,inputS:
   requires isTapeSymbolsValid(inputS,addTapeS)
   requires isTransitionsValid(delta,inputS,addTapeS)
 {
-  forall input:seq<string> :: (input in lang) <==> (
+  (forall input:seq<string> :: (input in lang) <==> (
     isInputValid(input,inputS) 
     && 
-    isAcceptedInTMInPolynomialTime(delta,q0,inputS,addTapeS,input))
+    isAcceptedInTMInPolynomialTime(delta,q0,inputS,addTapeS,input))) &&(
+      forall input:seq<string>:: !(input in lang) <==> (
+        !isInputValid(input,inputS) || !isAcceptedInTM(delta,q0,inputS,addTapeS,input)) 
+    )
+    
 }
+
+lemma acceptedPolysoAcceptedOverall(delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,q0:State,lang:Language)
+  requires isTapeSymbolsValid(inputS,addTapeS)
+  requires isTransitionsValid(delta,inputS,addTapeS)
+  requires isLanguageAcceptedInTMInPolynomialTime(delta,inputS,addTapeS,q0,lang)
+  ensures isLanguageAcceptedInTM(delta,inputS,addTapeS,q0,lang)
+{
+
+}
+
 
 
 

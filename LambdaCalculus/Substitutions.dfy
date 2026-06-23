@@ -3,12 +3,11 @@ include "FreeBoundAndVars.dfy"
 
 
 function substitution(t:LambdaTerm,x:Id,t':LambdaTerm):LambdaTerm
-    decreases lHeight(t)
+
 {
     match t
         case Var(y) =>  if y==x 
                             then 
-                            assert vars(t)<=reunion(vars(t),vars(t'));
                             t' 
                         else Var(y)
         case Lambda(y,t1) =>    if y==x 

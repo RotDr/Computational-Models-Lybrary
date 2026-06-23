@@ -418,104 +418,6 @@ lemma CaSubstEquivalence'(t1:LambdaTerm,t2:LambdaTerm,t1':LambdaTerm,t2':LambdaT
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 lemma StripOuterBinder(t1:LambdaTerm, t2:LambdaTerm, w:Id, id1:seq<Id>, id2:seq<Id>)
     requires alphaEquivalence'(t1, t2, [w]+id1, [w]+id2)
     ensures alphaEquivalence'(t1, t2, id1, id2)
@@ -791,14 +693,6 @@ lemma SubstRespectsBinderAlpha(x:Id, A:LambdaTerm, xx:Id, B:LambdaTerm, N:Lambda
     AlphaEquivTransitive(caSubstitution(A,x,N), caSubstitution(Aw,w,N), caSubstitution(Bw,w,N));
     AlphaEquivTransitive(caSubstitution(A,x,N), caSubstitution(Bw,w,N), caSubstitution(B,xx,N));
                 }
-
-
-// ===========================================================================
-// Mutually-recursive layer for alpha-invariance of parallel reduction.
-// ===========================================================================
-
-
-
 
 
 lemma ParRedPreservesNonFree(M:LambdaTerm, M':LambdaTerm, y:Id)

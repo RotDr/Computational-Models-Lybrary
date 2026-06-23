@@ -10,7 +10,7 @@ ghost predicate isTransitionsDeterministic(delta:Transitions,inputS:InputSymbols
 type DeterministicTransitions = map<Key,Action>
 
 
-ghost function fromNDTMtoDTM (delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols) : DeterministicTransitions
+function fromNDTMtoDTM (delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols) : DeterministicTransitions
   requires isTapeSymbolsValid(inputS,addTapeS)
   requires isTransitionsValid(delta,inputS,addTapeS)
   requires isTransitionsDeterministic(delta,inputS,addTapeS)
@@ -19,7 +19,7 @@ ghost function fromNDTMtoDTM (delta:Transitions,inputS:InputSymbols,addTapeS:Add
 {
   fromNDTMtoDTM'(delta,inputS,addTapeS,delta.Keys)
 }
-ghost function fromNDTMtoDTM'(delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,keys:set<Key>) : DeterministicTransitions
+function fromNDTMtoDTM'(delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,keys:set<Key>) : DeterministicTransitions
   requires isTapeSymbolsValid(inputS,addTapeS)
   requires isTransitionsValid(delta,inputS,addTapeS)
   requires isTransitionsDeterministic(delta,inputS,addTapeS)
@@ -62,13 +62,13 @@ ghost predicate isDeterministicTransitionsValid(delta:DeterministicTransitions,i
                                                             (match delta[Key(q0,s0)]
                                                               case Action(_,s1,_) => s1 in inputS+addTapeS))
 }
-ghost function fromDTMtoNDTM (delta:DeterministicTransitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols) : Transitions
+function fromDTMtoNDTM (delta:DeterministicTransitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols) : Transitions
   requires isTapeSymbolsValid(inputS,addTapeS)
   requires isDeterministicTransitionsValid(delta,inputS,addTapeS)
 {
   fromDTMtoNDTM'(delta,inputS,addTapeS,delta.Keys)
 }
-ghost function fromDTMtoNDTM'(delta:DeterministicTransitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,keys:set<Key>) : Transitions
+ function fromDTMtoNDTM'(delta:DeterministicTransitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,keys:set<Key>) : Transitions
   requires isTapeSymbolsValid(inputS,addTapeS)
   requires isDeterministicTransitionsValid(delta,inputS,addTapeS)
   requires keys <= delta.Keys
@@ -140,7 +140,9 @@ lemma fromDTMtoNDTMEquivalence (delta:DeterministicTransitions,inputS:InputSymbo
   requires isTapeSymbolsValid(inputS,addTapeS)
   requires isDeterministicTransitionsValid(delta,inputS,addTapeS)
   ensures var delta':=fromDTMtoNDTM(delta,inputS,addTapeS);
-  isTransitionsValid(delta',inputS,addTapeS) && isTransitionsDeterministic(delta',inputS,addTapeS) && fromNDTMtoDTM(delta',inputS,addTapeS)==delta
+  isTransitionsValid(delta',inputS,addTapeS) && 
+  isTransitionsDeterministic(delta',inputS,addTapeS) 
+  && fromNDTMtoDTM(delta',inputS,addTapeS)==delta
 {
 
 }
@@ -149,7 +151,8 @@ lemma fromNDTMtoDTMEquivalence (delta:Transitions,inputS:InputSymbols,addTapeS:A
   requires isTransitionsValid(delta,inputS,addTapeS)
   requires isTransitionsDeterministic(delta,inputS,addTapeS)
   ensures var delta':=fromNDTMtoDTM(delta,inputS,addTapeS);
-  isDeterministicTransitionsValid(delta',inputS,addTapeS)  && fromDTMtoNDTM(delta',inputS,addTapeS)==delta
+  isDeterministicTransitionsValid(delta',inputS,addTapeS)  
+  && fromDTMtoNDTM(delta',inputS,addTapeS)==delta
 {
 
 }
@@ -278,6 +281,7 @@ ghost predicate isAcceptedInDTM(delta : DeterministicTransitions, q0:State,input
   
 }
 
+
 lemma AcceptedInDTMisAcceptedInTM (delta : DeterministicTransitions, q0:State,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,input:seq<string>)
   requires isTapeSymbolsValid(inputS,addTapeS)
   requires isDeterministicTransitionsValid(delta,inputS,addTapeS)
@@ -290,6 +294,7 @@ lemma AcceptedInDTMisAcceptedInTM (delta : DeterministicTransitions, q0:State,in
   var conf:|isConfAccepted(conf) && isThereAClosedTransitionDTM(delta,inputS,addTapeS,initialConfiguration(input,q0,inputS),conf);
   thereIsOnlyOnePathToACLosedTransitions(delta,inputS,addTapeS,initialConfiguration(input,q0,inputS),conf);
 }
+
 
 ghost predicate isRejectedInDTM(delta : DeterministicTransitions, q0:State,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,input:seq<string>)
   requires isTapeSymbolsValid(inputS,addTapeS)
@@ -383,7 +388,7 @@ ghost function simulateDTM(delta:DeterministicTransitions,inputS:InputSymbols,ad
     assert canAStateReachAFinalStateInNStepsDTM(delta,inputS,addTapeS,conf,n);
     simulateDTM'(delta,inputS,addTapeS,conf,n)
 }
-ghost function simulateDTM'(delta:DeterministicTransitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,conf:Configuration, n:nat): Configuration
+function simulateDTM'(delta:DeterministicTransitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,conf:Configuration, n:nat): Configuration
     requires isTapeSymbolsValid(inputS,addTapeS)
     requires isDeterministicTransitionsValid(delta,inputS,addTapeS)
     requires canAStateReachAFinalStateInNStepsDTM(delta,inputS,addTapeS,conf,n)
@@ -395,6 +400,30 @@ ghost function simulateDTM'(delta:DeterministicTransitions,inputS:InputSymbols,a
                                                                 case Some(_) => conf
                                                                 case None =>match applyTransitionDTM(conf,delta)
                                                                             case Some(conf')=>
-                                                                                simulateDTM'(delta,inputS,addTapeS,conf',n-1) // need to prove termination                                                                                                                                                                                       
+                                                                                simulateDTM'(delta,inputS,addTapeS,conf',n-1)                                                                                                                                                             
+}
+
+lemma LinkTransitions(
+  delta: DeterministicTransitions, 
+  inputS: InputSymbols, 
+  addTapeS: AdditionalTapeSymbols, 
+  c1: Configuration, 
+  c2: Configuration, 
+  c3: Configuration, 
+  n: nat
+)
+  requires isTapeSymbolsValid(inputS, addTapeS)
+  requires isDeterministicTransitionsValid(delta, inputS, addTapeS)
+  requires isThereAClosedTransitionInNStepsForDTM(delta, inputS, addTapeS, c1, c2, n)
+  requires applyTransitionDTM(c2, delta) == Some(c3)
+  ensures isThereAClosedTransitionInNStepsForDTM(delta, inputS, addTapeS, c1, c3, n + 1)
+  decreases n
+{
+  if n == 0 {
+  } else {
+    var c_prime :| applyTransitionDTM(c1, delta) == Some(c_prime) && 
+                   isThereAClosedTransitionInNStepsForDTM(delta, inputS, addTapeS, c_prime, c2, n-1);
+    LinkTransitions(delta, inputS, addTapeS, c_prime, c2, c3, n - 1);
+  }
 }
 

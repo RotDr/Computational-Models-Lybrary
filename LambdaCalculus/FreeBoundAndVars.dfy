@@ -9,10 +9,6 @@ function bound(t:LambdaTerm):set<Id>
                 case Application(t1,t2) => bound(t1)+bound(t2)
 }
 
-
-
-
-
 function free(t:LambdaTerm):set<Id>
 {
      match t
@@ -47,7 +43,7 @@ function vars(t:LambdaTerm):seq<Id>
                 case Application(t1,t2) => reunion(vars(t1),vars(t2))
 }
 function varsSet(t:LambdaTerm):set<Id>
-    ensures forall x:Id:: (x in varsSet(t)) ==> (x in vars(t))
+    ensures forall x:Id:: (x in varsSet(t)) <==> (x in vars(t))
 {
     match t 
             case Var(x) => {x}

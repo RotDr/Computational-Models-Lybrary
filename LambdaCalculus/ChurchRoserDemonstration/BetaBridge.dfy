@@ -99,16 +99,13 @@ lemma BetaStarToParStarN(a:LambdaTerm, b:LambdaTerm, n:nat)
     decreases n
 {
     if n == 0 {
-        assert betaReducationInNSteps(a, b, 0);     // = alphaEquivalence(a,b)
+        assert betaReducationInNSteps(a, b, 0);    
         assert alphaEquivalence(a, b);
-        assert parallelReductionInNSteps(a, b, 0);  // = alphaEquivalence(a,b)  =>  parallelReductionClosure(a,b)
+        assert parallelReductionInNSteps(a, b, 0);  
     } else {
         var s, a' :| alphaEquivalence(a, s) && betaReductionClosure(s, a') && betaReducationInNSteps(a', b, n-1);
-        // a =α s : an alpha step is a parallel step (alpha is the first disjunct of parallelReduction).
         assert parallelReduction(a, s);
-        // s →β a' : a single beta step is a parallel step.
         BetaStepClosureIsPar(s, a');
-        // a' ։* b by induction; prepend s ։ a', then a ։ s.
         BetaStarToParStarN(a', b, n-1);
         ParClosurePrepend(s, a', b);
         ParClosurePrepend(a, s, b);
