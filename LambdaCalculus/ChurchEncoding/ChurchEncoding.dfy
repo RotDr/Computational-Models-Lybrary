@@ -36,7 +36,7 @@ function falseVal():LambdaTerm
 }
 
 
-predicate isAnd(t:LambdaTerm) //sintactic
+predicate isAnd(t:LambdaTerm) 
 {
     match t 
         case Lambda(x,Lambda(y,Application(Application(Var(id1),Var(id2)),Var(id3)))) => id1==x==id3 && id2==y

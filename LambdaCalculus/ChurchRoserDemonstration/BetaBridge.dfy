@@ -333,7 +333,6 @@ lemma StepIsBetaStar(a:LambdaTerm, b:LambdaTerm)
     assert betaReducationInNSteps(a, b, 1);
 }
 
-// The root contraction (λx.M)Q →β M[Q/x] is choice 0.
 lemma RootBetaStep(x:Id, M:LambdaTerm, Q:LambdaTerm)
     ensures betaReductionClosure(Application(Lambda(x,M), Q), caSubstitution(M, x, Q))
 {
