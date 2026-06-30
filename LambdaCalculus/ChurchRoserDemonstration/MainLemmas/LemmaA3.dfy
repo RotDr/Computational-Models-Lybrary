@@ -181,7 +181,7 @@ lemma parallelReductionSubstitution(M:LambdaTerm,N:LambdaTerm,N':LambdaTerm,x:Id
                     assert alphaEquivalence(right_lambda, M_sub_N') by {
                         assert M_renamed == Lambda(y', safe_body);
                         SubstPushesIntoSafeLambda(y', safe_body, x, N');
-                        assert alphaEquivalence(M_renamed_sub_N', right_lambda); // Utilizing the frozen variable!
+                        assert alphaEquivalence(M_renamed_sub_N', right_lambda); 
 
                         EqualTermsAreAlphaEquilvalent(N', N');
                         CaSubstEquivalence(M, N', M_renamed, N', x);
