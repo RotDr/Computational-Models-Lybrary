@@ -10,11 +10,11 @@ ghost predicate parallelReduction(t1:LambdaTerm, t2:LambdaTerm)
         case Application(t1a, t1b) =>
             (match t2
                 case Application(t2a, t2b) =>
-                    parallelReduction(t1a, t2a) && parallelReduction(t1b, t2b)
+                    parallelReduction(t1a, t2a) && parallelReduction(t1b, t2b) //rule 3
                 case _ => false)
             ||
             (match t1a
-                case Lambda(x, M) =>
+                case Lambda(x, M) => // rule 4
                     exists M': LambdaTerm, N': LambdaTerm ::
                         (assert lHeight(M) < lHeight(t1); parallelReduction(M, M'))
                         && parallelReduction(t1b, N')
@@ -22,7 +22,7 @@ ghost predicate parallelReduction(t1:LambdaTerm, t2:LambdaTerm)
                 case _ => false)
         case Lambda(x, body1) =>
             exists r: LambdaTerm ::
-                parallelReduction(body1, r) && alphaEquivalence(Lambda(x, r), t2)
+                parallelReduction(body1, r) && alphaEquivalence(Lambda(x, r), t2) //rule 2
         case _ => false
 }
 

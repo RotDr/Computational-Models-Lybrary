@@ -1,7 +1,9 @@
 datatype circuitCell = AND(pos1:nat,pos2:nat) | OR(pos1:nat,pos2:nat) | NOT(pos:nat) | VARIABLE(x:string) 
 datatype Option<T> = Some(t:T) |None
 type Id= nat
-datatype LambdaTerm = Var(id:Id) | Lambda(x:Id,t:LambdaTerm) | Application( t1:LambdaTerm, t2:LambdaTerm)
+datatype LambdaTerm = Var(id:Id) 
+| Lambda(x:Id,t:LambdaTerm) 
+| Application( t1:LambdaTerm, t2:LambdaTerm)
 
 
 function max(a:nat,b:nat) :nat 
@@ -20,11 +22,11 @@ function minim (a:nat,b:nat) : nat
 }
 
 type circuit=seq<circuitCell>
+const ReservedWords:=["AND","OR","NOT","TRUE","FALSE","CERTIFICATE"]
 type stringNat = s: string |
     |s| > 0 && (|s| > 1 ==> s[0] != '0') &&
     forall i | 0 <= i < |s| :: s[i] in "0123456789"
     witness "1"
-const ReservedWords:=["AND","OR","NOT","TRUE","FALSE","CERTIFICATE"]
 predicate isStringAValidNumber (s:string)
 {
     |s| > 0 && (|s| > 1 ==> s[0] != '0') &&
@@ -34,8 +36,9 @@ predicate isStringAValidNumber (s:string)
     ensures isStringAValidNumber(natToString(n))
    {
     match n
-    case 0 => "0" case 1 => "1" case 2 => "2" case 3 => "3" case 4 => "4"
-    case 5 => "5" case 6 => "6" case 7 => "7" case 8 => "8" case 9 => "9"
+    case 0 => "0" case 1 => "1" case 2 => "2" 
+    case 3 => "3" case 4 => "4" case 5 => "5" 
+    case 6 => "6" case 7 => "7" case 8 => "8" case 9 => "9"
     case _ => natToString(n / 10) + natToString(n % 10)
   }
 
@@ -45,8 +48,9 @@ predicate isStringAValidNumber (s:string)
   {
     if |s| == 1 then
       match s[0]
-      case '0' => 0 case '1' => 1 case '2' => 2 case '3' => 3 case '4' => 4
-      case '5' => 5 case '6' => 6 case '7' => 7 case '8' => 8 case '9' => 9
+      case '0' => 0 case '1' => 1 case '2' => 2 
+      case '3' => 3 case '4' => 4 case '5' => 5 
+      case '6' => 6 case '7' => 7 case '8' => 8 case '9' => 9
     else
       stringToNat(s[..|s|-1])*10 + stringToNat(s[|s|-1..|s|])
   }

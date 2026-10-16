@@ -15,7 +15,33 @@ lemma ElementNotInallUnique (s:seq<Id>,x:Id)
 predicate includes(s1:seq<Id>,s2:seq<Id>)
     
 {
-    forall id2:nat::id2<|s2| ==> (exists id1:nat::id1<|s1| && s1[id1]==s2[id2])
+    forall id2:nat::id2<|s2| 
+    ==> (exists id1:nat::id1<|s1| && s1[id1]==s2[id2] )
+}
+function identitate(x:nat):nat
+{
+    x
+}
+
+lemma IncludesWitness(s: seq<Id>, i: nat)
+    requires i < |s|
+    ensures exists j: nat :: j < |s| && s[j] == s[i]
+{
+    assert s[i] in s;
+    var j: nat :| j < |s| && s[j] == s[i];
+    assert j < |s| && s[j] == s[i];
+}
+
+
+lemma IncludesItself(s: seq<Id>)
+    ensures includes(s, s)
+{
+    if !includes(s, s) {
+        var id2: nat :| id2 < |s| && !(exists id1: nat :: id1 < |s| && s[id1] == s[id2]);
+        assert s[id2] in s;
+        var id1: nat :| id1 < |s| && s[id1] == s[id2];
+        assert false;
+    }
 }
 
 function remove(s:seq<Id>,x:Id):seq<Id>
@@ -121,6 +147,14 @@ lemma NotInReunionSoNotInBoth(s1:seq<Id>,s2:seq<Id>,x:Id)
 
 }
 
+lemma NotInBothSoNotInReunion(s1:seq<Id>,s2:seq<Id>,x:Id)
+    requires allUnique(s1) && allUnique(s2)
+    requires !(x in s1) && !(x in s2)
+    ensures !(x in reunion(s1,s2))
+{
+
+}
+
 function highestId(s:seq<Id>) :nat
     ensures s!=[] ==> forall index:nat:: index<|s| ==> s[index]<=highestId(s)
     ensures s!=[] ==> exists index:nat:: index<|s| && s[index]==highestId(s)
@@ -147,5 +181,3 @@ function addAnUniqueId(s:seq<Id>) :seq<Id>
         assert forall id:nat::id<|s| ==> s[id]==s'[id+1];
         s'
 }
-
-

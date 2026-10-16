@@ -3,10 +3,11 @@ include "./../../objects.dfy"
 predicate isTrue(t:LambdaTerm) 
 {
     match t 
-        case Lambda(x,Lambda(y,Var(z))) => z==x
+        case Lambda(x,Lambda(y,Var(z))) => z==x && x!=y
         case _ => false
 }
 function trueVar(x:Id,y:Id) : LambdaTerm
+    requires x!=y
     ensures isTrue(trueVar(x,y))
 {
     Lambda(x,Lambda(y,Var(x)))
@@ -18,13 +19,14 @@ function trueVal():LambdaTerm
 }
 
 
-predicate isFalse(t:LambdaTerm) 
+predicate isFalse(t:LambdaTerm)
 {
     match t 
-        case Lambda(x,Lambda(y,Var(z))) => z==y
+        case Lambda(x,Lambda(y,Var(z))) => z==y && x!=y
         case _ => false
 }
 function falseVar(x:Id,y:Id):LambdaTerm
+    requires x!=y
     ensures isFalse(falseVar(x,y))
 {
     Lambda(x,Lambda(y,Var(y)))
@@ -39,10 +41,11 @@ function falseVal():LambdaTerm
 predicate isAnd(t:LambdaTerm) 
 {
     match t 
-        case Lambda(x,Lambda(y,Application(Application(Var(id1),Var(id2)),Var(id3)))) => id1==x==id3 && id2==y
+        case Lambda(x,Lambda(y,Application(Application(Var(id1),Var(id2)),Var(id3)))) => id1==x==id3 && id2==y && x!=y
         case _ => false
 }
 function andVar(x:Id,y:Id) : LambdaTerm
+    requires x!=y
     ensures isAnd(andVar(x,y))
 {
     Lambda(x,Lambda(y,Application(Application(Var(x),Var(y)),Var(x))))
@@ -57,10 +60,11 @@ function andVal():LambdaTerm
 predicate isOr(t:LambdaTerm)
 {
     match t 
-        case Lambda(x,Lambda(y,Application(Application(Var(id1),Var(id2)),Var(id3)))) => id1==x==id2 && id3==y
+        case Lambda(x,Lambda(y,Application(Application(Var(id1),Var(id2)),Var(id3)))) => id1==x==id2 && id3==y && x!=y
         case _ => false
 }
 function orVar(x:Id,y:Id) :LambdaTerm
+    requires x!=y
     ensures isOr(orVar(x,y))
 {
     Lambda(x,Lambda(y,Application(Application(Var(x),Var(x)),Var(y))))
@@ -96,6 +100,7 @@ predicate isZero(t:LambdaTerm)
 
 
 function fromNumberToLambdaVar(nr:nat,f:Id,x:Id) : LambdaTerm
+    requires f!=x
     ensures isTermThatNumber(fromNumberToLambdaVar(nr,f,x),nr)
 {
     Lambda(f,Lambda(x,nFsAndOneX(nr,x,f)))
@@ -107,6 +112,7 @@ function fromNumberToLambdaVal(nr:nat): LambdaTerm
     fromNumberToLambdaVar(nr,2,0)
 }
 function nFsAndOneX(n:nat,x:Id,f:Id) :LambdaTerm
+    requires x!=f
     decreases n
 {
     if n==0 then Var(x)
@@ -114,10 +120,9 @@ function nFsAndOneX(n:nat,x:Id,f:Id) :LambdaTerm
 }
 
 predicate isTermThatNumber(t:LambdaTerm,n:nat)
-
 {
     match t 
-        case Lambda(f,Lambda(x,t')) => t'==nFsAndOneX(n,x,f)
+        case Lambda(f,Lambda(x,t')) => f!=x && t'==nFsAndOneX(n,x,f) 
         case _ => false
 }
 
@@ -138,11 +143,12 @@ predicate isSucc(t:LambdaTerm)
                                         )
                                 )
                         )
-                    ) => id1==n && id2==id3==f && id4==x 
+                    ) => id1==n && id2==id3==f && id4==x && x!=f
         case _ => false
 }
 
 function succVar(n:Id,f:Id,x:Id):LambdaTerm
+    requires f!=x
     ensures isSucc(succVar(n,f,x))
 {
     Lambda(n,

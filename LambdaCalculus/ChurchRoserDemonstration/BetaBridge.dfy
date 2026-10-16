@@ -443,7 +443,8 @@ lemma ChurchRosser(a:LambdaTerm, b:LambdaTerm, c:LambdaTerm)
     requires betaReducationsClosure(a, b)
     requires betaReducationsClosure(a, c)
     ensures exists d1:LambdaTerm, d2:LambdaTerm ::
-        betaReducationsClosure(b, d1) && betaReducationsClosure(c, d2) && alphaEquivalence(d1, d2)
+        betaReducationsClosure(b, d1) && betaReducationsClosure(c, d2) 
+        && alphaEquivalence(d1, d2)
 {
     BetaStarToParStar(a, b);
     BetaStarToParStar(a, c);

@@ -2,41 +2,26 @@ include "./../objects.dfy"
 
 
 datatype Symbol = NonBlankSymbol (s : string) | Blank 
-
 type InputSymbols = set<Symbol>
+type AdditionalTapeSymbols = set<Symbol> 
+datatype Conclusion = Accept | Reject 
+datatype State = State (s:string, c:Option<Conclusion>)
+type iseq<T> = int -> T
+type Tape = iseq<Symbol>
+datatype Configuration = Configuration(s : State, tape : iseq<Symbol>,head:int)
+datatype Key = Key(state : State, symbol : Symbol)
+datatype Direction = Left | Right
+datatype Action = Action(state : State, symbol : Symbol, direction : Direction)
+type Transitions = map<Key,seq<Action>> 
 
 ghost predicate isInputValid (input:seq<string>,inputSymbols:InputSymbols)
 {
   forall i:string :: (i in input) ==> (NonBlankSymbol(i) in inputSymbols)
 }
-
-type AdditionalTapeSymbols = set<Symbol> 
-
 ghost predicate isTapeSymbolsValid (inputS:InputSymbols,ats:AdditionalTapeSymbols)
 {
     inputS*ats=={} && Blank in ats
 }
-
-type iseq<T> = int -> T
-
-type Tape = iseq<Symbol>
-
-datatype Conclusion = Accept | Reject 
-
-datatype State = State (s:string, c:Option<Conclusion>)
-
-
-datatype Configuration = Configuration(s : State, tape : iseq<Symbol>,head:int)
-
-datatype Key = Key(state : State, symbol : Symbol)
-
-datatype Direction = Left | Right
- 
-datatype Action = Action(state : State, symbol : Symbol, direction : Direction)
- 
-type Transitions = map<Key,seq<Action>> 
-
-
 function moveLeft(con:Configuration) : Configuration
 {
   match con 
@@ -107,17 +92,22 @@ function initialConfiguration (input: seq<string>, q:State, inputS:InputSymbols)
 }
 
 
-ghost predicate isThereAClosedTransitionInNSteps(delta:Transitions, conf1:Configuration, conf2:Configuration, n:nat) 
+ghost predicate isThereAClosedTransitionInNSteps
+(delta:Transitions, conf1:Configuration, conf2:Configuration, n:nat) 
     decreases n
 {
   if n==0 then conf1==conf2
     else  
-  exists conf',poz:nat::(isPozInTransitions(conf1,delta,poz)) && applyTransition(conf1,delta,poz)==Some(conf') && isThereAClosedTransitionInNSteps(delta,conf',conf2,n-1) 
+  exists conf',poz:nat::(isPozInTransitions(conf1,delta,poz)) 
+  && applyTransition(conf1,delta,poz)==Some(conf') 
+  && isThereAClosedTransitionInNSteps(delta,conf',conf2,n-1) 
 }
 
-ghost predicate isThereAClosedTransition(delta:Transitions,conf1:Configuration, conf2:Configuration)
+ghost predicate isThereAClosedTransition
+(delta:Transitions,conf1:Configuration, conf2:Configuration)
 {
-  exists n:nat:: isThereAClosedTransitionInNSteps(delta, conf1, conf2, n)
+  exists n:nat:: 
+  isThereAClosedTransitionInNSteps(delta, conf1, conf2, n)
 }
 
 

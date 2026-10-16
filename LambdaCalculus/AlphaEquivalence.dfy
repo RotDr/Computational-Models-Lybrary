@@ -13,30 +13,34 @@ predicate alphaEquivalence(t1:LambdaTerm,t2:LambdaTerm)
 
 predicate alphaEquivalence'(t1:LambdaTerm,t2:LambdaTerm,id1:seq<Id>,id2:seq<Id>)
     decreases minim(lHeight(t1),lHeight(t2))
-
-{
-    
+{ 
     match t1
-        case Var(x) => (match t2 
-                            case Var(y) => (
-                                var r1:=findId(id1,x);
-                                var r2:=findId(id2,y);
-                                r1==r2 
-                                &&
-                                match r1
-                                    case None => x==y
-                                    case Some(_) => true 
-                            )
-                            case _ => false
-                        ) 
-        case Lambda(x,t1') => (match t2
-                                case Lambda(y,t2') => 
-
-                                    alphaEquivalence'(t1',t2',id1+[x],id2+[y])
-                                case _=> false)
-        case Application(t1',t1'') => match t2
-                                        case Application(t2',t2'')=> alphaEquivalence'(t1',t2',id1,id2) && alphaEquivalence'(t1'',t2'',id1,id2)
-                                        case _=>false
+        case Var(x) => 
+        (match t2 
+            case Var(y) 
+            => (                  
+            var r1:=findId(id1,x);
+            var r2:=findId(id2,y);
+            r1==r2 
+            &&
+            match r1
+                case None => x==y
+                case Some(_) => true 
+            )
+            case _ => false
+        ) 
+        case Lambda(x,t1') 
+        => (match t2
+            case Lambda(y,t2')
+            => alphaEquivalence'(t1',t2',id1+[x],id2+[y])
+            case _=> false
+            )
+        case Application(t1',t1'') 
+        => match t2
+        case Application(t2',t2'')
+        => alphaEquivalence'(t1',t2',id1,id2) 
+        && alphaEquivalence'(t1'',t2'',id1,id2)
+        case _=>false
 }
 
 lemma AlphaSameHeight(t1:LambdaTerm, t2:LambdaTerm)

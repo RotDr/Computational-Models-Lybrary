@@ -1,7 +1,8 @@
 include "NDTM.dfy"
 
 
-ghost predicate isTransitionsDeterministic(delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols)
+ghost predicate isTransitionsDeterministic
+(delta:Transitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols)
     requires isTapeSymbolsValid(inputS,addTapeS)
     requires isTransitionsValid(delta,inputS,addTapeS)
 {
@@ -169,14 +170,18 @@ function applyTransitionDTM(config : Configuration, delta : DeterministicTransit
                       
 
 }
-ghost predicate isThereAClosedTransitionInNStepsForDTM(delta:DeterministicTransitions,inputS:InputSymbols ,addTapeS:AdditionalTapeSymbols, conf1:Configuration, conf2:Configuration, n:nat) // functii de tranzitii
+ghost predicate isThereAClosedTransitionInNStepsForDTM
+(delta:DeterministicTransitions,inputS:InputSymbols 
+,addTapeS:AdditionalTapeSymbols, conf1:Configuration, conf2:Configuration,n:nat)
     requires isTapeSymbolsValid(inputS,addTapeS)
     requires isDeterministicTransitionsValid(delta,inputS,addTapeS)
     decreases n
 {
   if n==0 then conf1==conf2
     else  
-  exists conf':Configuration:: applyTransitionDTM(conf1,delta)==Some(conf') && isThereAClosedTransitionInNStepsForDTM(delta,inputS,addTapeS,conf',conf2,n-1) 
+  exists conf':Configuration:: 
+  applyTransitionDTM(conf1,delta)==Some(conf') 
+  && isThereAClosedTransitionInNStepsForDTM(delta,inputS,addTapeS,conf',conf2,n-1) 
 }
 
 lemma ClosedTransitionEquivalence (delta:DeterministicTransitions, inputS:InputSymbols, addTapeS:AdditionalTapeSymbols, conf1:Configuration, conf2:Configuration, n:nat)
@@ -374,33 +379,44 @@ lemma reachFinalStateEquivalence (delta : DeterministicTransitions,inputS:InputS
   thereIsOnlyOnePathToACLosedTransitions(delta,inputS,addTapeS,conf1,conf);
 }
 
-ghost function simulateDTM(delta:DeterministicTransitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,conf:Configuration): Configuration
+ghost function simulateDTM(delta:DeterministicTransitions,
+inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,
+conf:Configuration): Configuration
     requires isTapeSymbolsValid(inputS,addTapeS)
     requires isDeterministicTransitionsValid(delta,inputS,addTapeS)
     requires canAStateReachAFinalStateDTM(delta,inputS,addTapeS,conf)
 {
     assert canAStateReachAFinalStateDTM(delta,inputS,addTapeS,conf);
-    var conf1:| ( isConfAccepted(conf1) || isConfRejected(conf1))  && isThereAClosedTransitionDTM(delta,inputS,addTapeS,conf,conf1);
+    var conf1:| ( isConfAccepted(conf1) || isConfRejected(conf1))  
+    && isThereAClosedTransitionDTM(delta,inputS,addTapeS,conf,conf1);
     assert isThereAClosedTransitionDTM(delta,inputS,addTapeS,conf,conf1);
     assert exists n:nat::isThereAClosedTransitionInNStepsForDTM(delta,inputS,addTapeS,conf,conf1,n);
     var n:|isThereAClosedTransitionInNStepsForDTM(delta,inputS,addTapeS,conf,conf1,n);
-    assert ( isConfAccepted(conf1) || isConfRejected(conf1))  && isThereAClosedTransitionInNStepsForDTM(delta,inputS,addTapeS,conf,conf1,n);
+    assert ( isConfAccepted(conf1) || isConfRejected(conf1))  
+    && isThereAClosedTransitionInNStepsForDTM(delta,inputS,addTapeS,conf,conf1,n);
     assert canAStateReachAFinalStateInNStepsDTM(delta,inputS,addTapeS,conf,n);
     simulateDTM'(delta,inputS,addTapeS,conf,n)
 }
-function simulateDTM'(delta:DeterministicTransitions,inputS:InputSymbols,addTapeS:AdditionalTapeSymbols,conf:Configuration, n:nat): Configuration
+function simulateDTM'
+(delta:DeterministicTransitions,inputS:InputSymbols,
+addTapeS:AdditionalTapeSymbols,conf:Configuration,
+n:nat): Configuration
     requires isTapeSymbolsValid(inputS,addTapeS)
     requires isDeterministicTransitionsValid(delta,inputS,addTapeS)
     requires canAStateReachAFinalStateInNStepsDTM(delta,inputS,addTapeS,conf,n)
     decreases n
 {
     match conf
-        case Configuration(q,tape,head)    => match q
-                                            case State(q,c) => match c 
-                                                                case Some(_) => conf
-                                                                case None =>match applyTransitionDTM(conf,delta)
-                                                                            case Some(conf')=>
-                                                                                simulateDTM'(delta,inputS,addTapeS,conf',n-1)                                                                                                                                                             
+        case Configuration(q,tape,head)    
+        => match q
+            case State(q,c) 
+            => match c 
+                case Some(_) 
+                => conf
+                case None 
+                =>match applyTransitionDTM(conf,delta)
+                    case Some(conf')
+                    =>simulateDTM'(delta,inputS,addTapeS,conf',n-1)                                                                                                                                                             
 }
 
 lemma LinkTransitions(

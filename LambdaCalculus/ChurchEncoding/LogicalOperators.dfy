@@ -5,27 +5,27 @@ lemma andTrueTrue(and:LambdaTerm, tru:LambdaTerm)
     ensures var andtruetrue:=Application(Application(and, tru), tru);
     normalOrderHalts(andtruetrue) && isTrue(normalOrder(andtruetrue))
 {
-    var s0 := Application(Application(and, tru), tru);
-    var help1    := Lambda(1, Application(Application(tru, Var(1)), tru));
-    var s1 := Application(help1, tru);
-    var s2    := Application(Application(tru, tru), tru);
-    var s3    := Application(Lambda(1, tru), tru);
+    var s0:= Application(Application(and, tru), tru);
+    var help1:= Lambda(1, Application(Application(tru, Var(1)), tru));
+    var s1:= Application(help1, tru);
+    var s2:= Application(Application(tru, tru), tru);
+    var s3:= Application(Lambda(1, tru), tru);
 
-    assert normalOrderStep(s0)     == Some(s1);
-    assert normalOrderStep(s1)     == Some(s2);
-    assert normalOrderStep(s2)        == Some(s3);
-    assert normalOrderStep(s3)        == Some(tru);
+    assert normalOrderStep(s0)== Some(s1);
+    assert normalOrderStep(s1)== Some(s2);
+    assert normalOrderStep(s2)== Some(s3);
+    assert normalOrderStep(s3)== Some(tru);
     assert trueVal()==tru;
     assert normalOrderStep(tru) == None;
 
 
-    assert normalOrder'(s0,      4) == normalOrder'(s1, 3);
-    assert normalOrder'(s1,      3) == normalOrder'(s2,    2);
-    assert normalOrder'(s2,         2) == normalOrder'(s3,    1);
-    assert normalOrder'(s3,         1) == normalOrder'(tru, 0);
-    assert normalOrder'(tru,  0) == tru;
-    assert normalOrder'(s0,      4) == tru;
-
+    assert normalOrder'(s0,4) == normalOrder'(s1,3);
+    assert normalOrder'(s1,3) == normalOrder'(s2,2);
+    assert normalOrder'(s2,2) == normalOrder'(s3,1);
+    assert normalOrder'(s3,1) == normalOrder'(tru,0);
+    assert normalOrder'(tru,0) == tru;
+    assert normalOrder'(s0,4) == tru;
+    
     forall m:nat | normalOrderEndsInNSteps(s0, m)
         ensures normalOrder'(s0, m) == tru
     {
@@ -281,7 +281,7 @@ lemma orFalseTrue(or:LambdaTerm,tru:LambdaTerm,fals:LambdaTerm)
     assert normalOrder'(s0,      4) == normalOrder'(s1, 3);
     assert normalOrder'(s1,      3) == normalOrder'(s2,    2);
     assert normalOrder'(s2,         2) == normalOrder'(s3,    1);
-    assert normalOrder'(Application(Lambda(1, tru), tru),         1) == normalOrder'(tru, 0);
+    assert normalOrder'(s3,         1) == normalOrder'(tru, 0);
     assert normalOrder'(tru,  0) == tru;
     assert normalOrder'(s0,      4) == tru;
 
@@ -355,7 +355,3 @@ lemma notFalse(not:LambdaTerm,fals:LambdaTerm)
 
     assert normalOrder(s0) == tru;
 }
-
-// defineste confluenta p
-// alfa echivalenta 
-//

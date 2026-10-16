@@ -1,34 +1,34 @@
-include "Certificate.dfy"
-include "Circuit.dfy"
-include "CKTInput.dfy"
-function circuitToInput (c:circuit) : seq<string>
-    requires isCircuitGood(c)
-{
-    circuitToInput'(c,0)
-}
-function numberToUnary (nr:nat): seq<string>
-    decreases nr
-    ensures nr>0 ==> |numberToUnary(nr)| == 1+|numberToUnary(nr-1)|
-    ensures |numberToUnary(0)|==1
-{
-    if nr==0 then 
-        ["POSITION"]
-    else
-        ["1"]+numberToUnary(nr-1)
-}
-function unaryToNumber (s:seq<string>) : nat
-    requires |s|>=1
-{
-    |s|-1
-}
-function circuitCellToSeqString (e:circuitCell) : seq<string>
-{
-    match e 
-        case AND(pos1,pos2) => numberToUnary(pos1)+numberToUnary(pos2)+["AND"]
-        case OR(pos1,pos2) => numberToUnary(pos1)+numberToUnary(pos2)+["OR"]
-        case NOT(pos1) => numberToUnary(pos1)+["NOT"]
-        case VARIABLE(x) => ["VARIABLE"]
-}
+// include "Certificate.dfy"
+// include "Circuit.dfy"
+// include "CKTInput.dfy"
+// function circuitToInput (c:circuit) : seq<string>
+//     requires isCircuitGood(c)
+// {
+//     circuitToInput'(c,0)
+// }
+// function numberToUnary (nr:nat): seq<string>
+//     decreases nr
+//     ensures nr>0 ==> |numberToUnary(nr)| == 1+|numberToUnary(nr-1)|
+//     ensures |numberToUnary(0)|==1
+// {
+//     if nr==0 then 
+//         ["POSITION"]
+//     else
+//         ["1"]+numberToUnary(nr-1)
+// }
+// function unaryToNumber (s:seq<string>) : nat
+//     requires |s|>=1
+// {
+//     |s|-1
+// }
+// function circuitCellToSeqString (e:circuitCell) : seq<string>
+// {
+//     match e 
+//         case AND(pos1,pos2) => numberToUnary(pos1)+numberToUnary(pos2)+["AND"]
+//         case OR(pos1,pos2) => numberToUnary(pos1)+numberToUnary(pos2)+["OR"]
+//         case NOT(pos1) => numberToUnary(pos1)+["NOT"]
+//         case VARIABLE(x) => ["VARIABLE"]
+// }
 // lemma stringToCircuitCellToStringIsTheSame (s:string,pos:nat)
 //     requires !(s in ["AND","OR","NOT","VARIABLE"]) ==> isStringAValidNumber(s)
 //     ensures circuitSeqCellToString(stringToCircuitCell(s,pos))==s

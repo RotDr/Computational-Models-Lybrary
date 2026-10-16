@@ -1,0 +1,12 @@
+C:\Users\Under\LicentaNew\bin\obj\Debug\net8.0\LocallyNameless.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Under\LicentaNew\bin\obj\Debug\net8.0\LocallyNameless.AssemblyInfoInputs.cache
+C:\Users\Under\LicentaNew\bin\obj\Debug\net8.0\LocallyNameless.AssemblyInfo.cs
+C:\Users\Under\LicentaNew\bin\obj\Debug\net8.0\LocallyNameless.csproj.CoreCompileInputs.cache
+C:\Users\Under\LicentaNew\bin\obj\Debug\net8.0\LocallyNameless.sourcelink.json
+C:\Users\Under\LicentaNew\bin\obj\Debug\net8.0\LocallyNameless.dll
+C:\Users\Under\LicentaNew\bin\obj\Debug\net8.0\refint\LocallyNameless.dll
+C:\Users\Under\LicentaNew\bin\obj\Debug\net8.0\LocallyNameless.pdb
+C:\Users\Under\LicentaNew\bin\LocallyNameless.deps.json
+C:\Users\Under\LicentaNew\bin\LocallyNameless.dll
+C:\Users\Under\LicentaNew\bin\obj\Debug\net8.0\ref\LocallyNameless.dll
+C:\Users\Under\LicentaNew\bin\LocallyNameless.pdb
