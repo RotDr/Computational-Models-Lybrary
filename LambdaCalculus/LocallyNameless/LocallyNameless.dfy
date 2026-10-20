@@ -393,7 +393,7 @@ lemma LocallyClosedAtDifferentLevels(t:RefLambdaTerm,x:nat,y:nat)
 
 lemma OpeningIsClosed(t:RefLambdaTerm,x:Id)
     requires locallyClosed(RefLambda(t))
-    ensures locallyClosed(open'(0,x,t));
+    ensures locallyClosed(open'(0,x,t))
 
 {
     OpeningIsClosed'(t,x,0);
@@ -427,6 +427,40 @@ lemma OpeningIsClosed'(t:RefLambdaTerm,x:Id,depth:nat)
         }
     
 }
+// lemma OpensRetainsFreeUp(t:RefLambdaTerm,t':RefLambdaTerm,x:Id)
+//     requires !(x in freeVarsSeq(t)) && !(x in freeVarsSeq(t'))
+//     requires freeVarsSeq(open'(0,x,t))==freeVarsSeq(open'(0,x,t'))
+//     ensures freeVarsSeq(t)==freeVarsSeq(t')
+// {
+//     OpensRetainsFreeUp'(t,t',x,0,0);
+// }
+
+// lemma OpensRetainsFreeUp'(t:RefLambdaTerm,t':RefLambdaTerm,x:Id,depth1:nat,depth2:nat)
+//     requires !(x in freeVarsSeq(t)) && !(x in freeVarsSeq(t'))
+//     requires freeVarsSeq(open'(depth1,x,t))==freeVarsSeq(open'(depth2,x,t'))
+//     ensures freeVarsSeq(t)==freeVarsSeq(t')
+// {
+//     match t 
+//         case FreeVar(_) =>
+//         {
+//             assert open'(depth1,x,t)==t;
+
+           
+//         }
+//         case BoundVar(ref1)=>
+//         {
+//             assume false;
+//         }
+//         case App(t1,t2)=>
+//         {
+
+//         }
+//         case RefLambda(t1)=>
+//         {
+
+//         }
+//     assume false;
+// }
 lemma RefSubsitutionClosure'(t:RefLambdaTerm,x:Id,t':RefLambdaTerm,depth:nat)
     requires locallyClosed'(t,depth) 
     requires locallyClosed'(t',depth)
@@ -778,3 +812,31 @@ lemma IfWeForgetThatIsOpenedItThenIsClosed'(t:RefLambdaTerm,x:Id,depth:nat)
             IfWeForgetThatIsOpenedItThenIsClosed'(t',x,depth+1);
         }
 }
+
+lemma OpeningWithFreeVarIsOpen(t:RefLambdaTerm, depth:nat, y:Id)
+    ensures opening(t,depth,FreeVar(y)) == open'(depth,y,t)
+{
+    match t
+        case FreeVar(_) => {}
+        case BoundVar(_) => {}
+        case RefLambda(t') => { OpeningWithFreeVarIsOpen(t',depth+1,y); }
+        case App(t1,t2) => {
+            OpeningWithFreeVarIsOpen(t1,depth,y);
+            OpeningWithFreeVarIsOpen(t2,depth,y);
+        }
+}
+
+lemma CloseOpenIsSubstitution(t:RefLambdaTerm, x:Id, y:Id, depth:nat)
+    requires locallyClosed'(t,depth)
+    ensures open'(depth,y,close'(t,x,depth)) == LNSubstitution(t,x,FreeVar(y))
+{
+    match t
+        case FreeVar(_) => {}
+        case BoundVar(n) => { assert n < depth; }
+        case RefLambda(t') => { CloseOpenIsSubstitution(t',x,y,depth+1); }
+        case App(t1,t2) => {
+            CloseOpenIsSubstitution(t1,x,y,depth);
+            CloseOpenIsSubstitution(t2,x,y,depth);
+        }
+}
+
